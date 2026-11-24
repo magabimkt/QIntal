@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="0" fill="#f6f4ee"/>
+  <!-- Grade 3×3 de matriz, com a última célula em destaque -->
+  <g transform="translate(106 106)">
+    <rect x="0" y="0" width="88" height="88" rx="14" fill="#e6e2d6"/>
+    <rect x="106" y="0" width="88" height="88" rx="14" fill="#e6e2d6"/>
+    <rect x="212" y="0" width="88" height="88" rx="14" fill="#e6e2d6"/>
+    <rect x="0" y="106" width="88" height="88" rx="14" fill="#e6e2d6"/>
+    <rect x="106" y="106" width="88" height="88" rx="14" fill="#e6e2d6"/>
+    <rect x="212" y="106" width="88" height="88" rx="14" fill="#e6e2d6"/>
+    <rect x="0" y="212" width="88" height="88" rx="14" fill="#e6e2d6"/>
+    <rect x="106" y="212" width="88" height="88" rx="14" fill="#e6e2d6"/>
+    <rect x="212" y="212" width="88" height="88" rx="14" fill="#0f7b5f"/>
+    <circle cx="44" cy="44" r="18" fill="#E69F00"/>
+    <circle cx="150" cy="44" r="24" fill="#E69F00"/>
+    <circle cx="256" cy="44" r="30" fill="#E69F00"/>
+    <rect x="26" y="132" width="36" height="36" rx="4" fill="#56B4E9"/>
+    <rect x="128" y="128" width="44" height="44" rx="4" fill="#56B4E9"/>
+    <rect x="230" y="124" width="52" height="52" rx="4" fill="#56B4E9"/>
+    <polygon points="44,236 64,272 24,272" fill="#009E73"/>
+    <polygon points="150,230 176,276 124,276" fill="#009E73"/>
+    <text x="256" y="282" text-anchor="middle" font-family="system-ui, sans-serif" font-size="72" font-weight="800" fill="#ffffff">?</text>
+  </g>
+</svg>

@@ -1,0 +1,2038 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f6f4ee">
+<title>QIntal — Bateria cognitiva</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="QIntal">
+<style>
+  :root {
+    /* Tema claro (vantagem da polaridade positiva) */
+    --bg: #f6f4ee;
+    --card: #ffffff;
+    --card2: #f1efe8;
+    --line: #e3dfd3;
+    --text: #1f2430;
+    --muted: #5d6474;
+    --accent: #0f7b5f;
+    --ok: #0f7b5f;
+    --bad: #b8860b;     /* erro no treino: âmbar, sem vermelho */
+    --warn: #9a6700;
+    /* Uma cor por etapa, derivadas da paleta Okabe-Ito, escurecidas para bom contraste */
+    --c1: #0f7b5f;      /* Etapa 1 · raciocínio fluido */
+    --c2: #1d63a8;      /* Etapa 2 · dígitos */
+    --c3: #b06400;      /* Etapa 3 · Corsi */
+    --c4: #a33f7c;      /* Etapa 4 · velocidade */
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.5; }
+  body { min-height: 100vh; }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 20px 16px 48px; }
+  h1 { font-size: 1.6rem; margin: 8px 0 4px; letter-spacing: -0.02em; }
+  h2 { font-size: 1.2rem; margin: 0 0 12px; }
+  h3 { font-size: 1rem; margin: 18px 0 6px; }
+  p { margin: 0 0 12px; }
+  .muted { color: var(--muted); font-size: 0.92rem; }
+  .small { font-size: 0.82rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; margin: 14px 0; }
+  .tag { display: inline-block; font-size: 0.75rem; padding: 3px 10px; border-radius: 999px; background: var(--card2); color: var(--accent); border: 1px solid var(--line); }
+  button { font: inherit; cursor: pointer; border: none; }
+  .btn { display: block; width: 100%; padding: 14px 18px; border-radius: 12px; background: var(--accent); color: #ffffff; font-weight: 700; font-size: 1rem; margin-top: 10px; }
+  .btn:disabled { opacity: 0.45; cursor: default; }
+  .btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); font-weight: 600; }
+  label { display: block; font-size: 0.9rem; margin-bottom: 6px; color: var(--muted); }
+  input[type=number] { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--card2); color: var(--text); font-size: 1rem; }
+  .check { display: flex; gap: 10px; align-items: flex-start; font-size: 0.9rem; color: var(--text); margin-top: 12px; }
+  .check input { margin-top: 4px; width: 18px; height: 18px; flex: none; }
+  .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+  .summary div { background: var(--card2); border: 1px solid var(--line); border-radius: 12px; padding: 10px 6px; text-align: center; }
+  .summary b { display: block; font-size: 1.25rem; color: var(--accent); }
+  .summary span { font-size: 0.75rem; color: var(--muted); }
+  ul.clean { padding-left: 18px; margin: 0 0 12px; }
+  ul.clean li { margin-bottom: 6px; }
+  .hidden { display: none !important; }
+
+  /* Teste */
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .progress { height: 6px; background: var(--card2); border-radius: 999px; overflow: hidden; margin-bottom: 14px; }
+  .progress > div { height: 100%; background: var(--accent); width: 0; transition: width .3s; }
+  .matrix { background: #eef0f3; border: 1px solid var(--line); border-radius: 14px; padding: 8px; }
+  .matrix svg { display: block; width: 100%; height: auto; }
+  /* As opções têm a mesma escala das células da matriz (importante para a regra de tamanho) */
+  .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px auto 0; width: calc(66.67% + 6px); }
+  .opt { background: #eef0f3; border-radius: 12px; padding: 6px; border: 3px solid transparent; transition: transform .1s, border-color .15s; }
+  .opt:active { transform: scale(0.97); }
+  .opt svg { display: block; width: 100%; height: auto; }
+  .opt.right { border-color: var(--ok); }
+  .opt.wrong { border-color: var(--bad); }
+  .timer { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--warn); min-width: 2.5em; text-align: right; }
+  .fix { display: flex; align-items: center; justify-content: center; height: 300px; font-size: 2.4rem; color: var(--muted); }
+  .feedback { margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: var(--card2); font-size: 0.92rem; }
+
+  /* Resultado */
+  .big { font-size: 3rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; }
+  .range { font-size: 1.05rem; color: var(--accent); font-weight: 600; }
+  .bell { width: 100%; height: auto; margin-top: 10px; }
+  .row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 0.92rem; }
+  .row:last-child { border-bottom: none; }
+  .row.band span:nth-child(1) { flex: 0 0 30%; }
+  .row.band span:nth-child(2) { flex: 1; }
+  .row.band span:nth-child(3) { flex: 0 0 18%; text-align: right; }
+  .row.head { font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .row.mine { background: rgba(15, 123, 95, 0.10); border-radius: 8px; padding-left: 8px; padding-right: 8px; font-weight: 700; color: var(--accent); }
+  .warnbox { border-left: 4px solid var(--warn); background: var(--card2); padding: 12px 14px; border-radius: 8px; font-size: 0.9rem; margin: 12px 0; }
+  .ref { font-size: 0.85rem; margin-bottom: 10px; color: var(--muted); }
+
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .info-grid div { background: var(--card2); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+  .info-grid b { display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--accent); margin-bottom: 4px; }
+  .info-grid span { font-size: 0.86rem; line-height: 1.4; }
+
+  /* Perfil */
+  .pbar { margin: 12px 0; }
+  .pbar .lbl { display: flex; justify-content: space-between; font-size: 0.88rem; margin-bottom: 4px; }
+  .pbar .track { position: relative; height: 12px; background: var(--card2); border-radius: 999px; }
+  .pbar .fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); border-radius: 999px; }
+  .pbar .mid { position: absolute; left: 50%; top: -3px; bottom: -3px; width: 2px; background: var(--warn); }
+
+  /* Etapa 3: Corsi */
+  .board { background: #e9ecef; border: 1px solid var(--line); border-radius: var(--radius); padding: 10px; touch-action: manipulation; }
+  .board svg { display: block; width: 100%; height: auto; }
+  .board rect.blk { fill: #2f5fb3; transition: fill .08s; cursor: pointer; }
+  .board rect.blk.on { fill: #E69F00; }
+  .board rect.blk.tap { fill: #9cc3ff; }
+
+  /* Etapa 4: velocidade */
+  .probe { height: 150px; display: flex; align-items: center; justify-content: center; background: #eef0f3; border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 14px; }
+  .probe svg { width: 110px; height: 110px; }
+  .sp-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px; }
+  .sp-buttons button { padding: 22px 0; border-radius: 14px; background: #3d4a5c; color: #ffffff; font-size: 2rem; font-weight: 800; transition: background .1s; }
+  .sp-buttons button.hit { background: #8b95a5; }  /* toque: clareamento neutro, sem vermelho */
+  .legend { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+  .legend div { background: #eef0f3; border: 1px solid var(--line); border-radius: 10px; padding: 6px 2px 4px; text-align: center; }
+  .legend svg { width: 100%; max-width: 44px; height: auto; display: block; margin: 0 auto; }
+  .legend b { display: block; color: #14161c; font-size: 1.15rem; border-top: 1px solid #c9ccd6; margin-top: 4px; padding-top: 2px; }
+
+  /* Identidade colorida (só nos menus e resultados; as telas de teste ficam neutras) */
+  .logo { font-size: 2.2rem; font-weight: 800; letter-spacing: -0.03em; margin: 8px 0 4px; }
+  .logo span:nth-child(1) { color: var(--c1); }
+  .logo span:nth-child(2) { color: var(--c3); }
+  .logo span:nth-child(3) { color: var(--c2); }
+  .logo span:nth-child(4) { color: var(--c4); }
+  .s1 { --sc: var(--c1); } .s2 { --sc: var(--c2); } .s3 { --sc: var(--c3); } .s4 { --sc: var(--c4); }
+  .stage { border-left: 6px solid var(--sc, var(--accent)); }
+  .stage .tag, .tag.s1, .tag.s2, .tag.s3, .tag.s4 { color: var(--sc); border-color: var(--sc); background: transparent; font-weight: 600; }
+  .stage .btn { background: var(--sc); }
+  .stage .stage-score { color: var(--sc); }
+  .stage h2 .ico { margin-right: 6px; }
+
+  /* Menu de etapas */
+  .stage-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .stage-score { font-weight: 700; font-size: 0.95rem; }
+  .stage h2 { margin-bottom: 2px; }
+  .stage.locked { opacity: 0.5; }
+
+  /* Etapa 2: dígitos */
+  .digit-stage { height: 220px; display: flex; align-items: center; justify-content: center; font-size: 6rem; font-weight: 800; font-variant-numeric: tabular-nums; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 14px; }
+  .slots { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 10px 0 16px; min-height: 44px; }
+  .slots span { width: 30px; height: 40px; border-bottom: 3px solid var(--line); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 700; }
+  .slots span.filled { border-color: var(--accent); }
+  .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .keypad button { padding: 18px 0; border-radius: 12px; background: var(--card2); color: var(--text); font-size: 1.5rem; font-weight: 700; border: 1px solid var(--line); }
+  .keypad button:active { background: var(--line); }
+  .keypad button.blank { visibility: hidden; }
+  .ref b { color: var(--text); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ============ TELA INICIAL ============ -->
+  <section id="s-home">
+    <span class="tag">Bateria cognitiva · modelo CHC</span>
+    <h1 class="logo" aria-label="QIntal"><span>Q</span><span>I</span><span>nt</span><span>al</span></h1>
+    <p class="muted">O quintal onde a mente brinca: quatro desafios baseados em testes científicos de inteligência, com pontuação comparada a estudos publicados.</p>
+
+    <div class="card">
+      <h2>Como funciona</h2>
+      <div class="summary">
+        <div><b>4</b><span>etapas</span></div>
+        <div><b>~20 min</b><span>no total</span></div>
+        <div><b>livre</b><span>ordem das etapas</span></div>
+      </div>
+      <ul class="clean">
+        <li><b>Raciocínio fluido:</b> matrizes com uma peça faltando (~8 min).</li>
+        <li><b>Memória de dígitos:</b> sequências de números (~6 min).</li>
+        <li><b>Blocos de Corsi:</b> sequências de blocos no espaço (~4 min).</li>
+        <li><b>Velocidade:</b> símbolos e números em 90 segundos (~3 min).</li>
+        <li>Cada etapa tem instruções e treino antes. Você pode fazer uma por vez, quando quiser.</li>
+        <li>Faça num lugar tranquilo, sem interrupções.</li>
+      </ul>
+      <label for="age">Sua idade (usada para comparar você com pessoas da mesma idade)</label>
+      <input type="number" id="age" min="10" max="110" inputmode="numeric" placeholder="Ex.: 27">
+      <label class="check"><input type="checkbox" id="agree"> Entendo que este é um teste de autoconhecimento, sem validade clínica, e que o resultado é uma estimativa com margem de erro.</label>
+      <button class="btn" id="b-start" disabled>Ver as etapas</button>
+    </div>
+
+    <div class="card hidden" id="cloud-card">
+      <h2>Salvar na nuvem</h2>
+      <p class="muted small" id="cloud-status">Carregando…</p>
+      <button class="btn ghost" id="b-login">Entrar com Google</button>
+      <button class="btn ghost hidden" id="b-logout">Sair da conta</button>
+    </div>
+
+    <button class="btn ghost" id="b-guide">Entenda o teste: etapas e pontuação</button>
+    <button class="btn ghost" id="b-history">Meus resultados anteriores</button>
+    <button class="btn ghost" id="b-about">A ciência por trás do teste</button>
+  </section>
+
+  <!-- ============ MENU DE ETAPAS ============ -->
+  <section id="s-menu" class="hidden">
+    <span class="tag">Bateria</span>
+    <h1>Etapas</h1>
+    <p class="muted">Cada etapa mede um domínio diferente do modelo CHC. Faça na ordem que quiser; o resultado mais recente de cada uma fica salvo.</p>
+    <div class="card hidden" id="m-profile"></div>
+    <div class="card stage s1">
+      <div class="stage-head"><span class="tag">Etapa 1 · Gf</span><span class="stage-score" id="m-gf"></span></div>
+      <h2><span class="ico">🧩</span>Raciocínio fluido</h2>
+      <p class="muted small">20 matrizes · cerca de 8 minutos</p>
+      <button class="btn" id="m-go-gf">Fazer etapa 1</button>
+    </div>
+    <div class="card stage s2">
+      <div class="stage-head"><span class="tag">Etapa 2 · Gwm</span><span class="stage-score" id="m-gwm"></span></div>
+      <h2><span class="ico">🔢</span>Memória de dígitos</h2>
+      <p class="muted small">Ordem direta e inversa · cerca de 6 minutos</p>
+      <button class="btn" id="m-go-ds">Fazer etapa 2</button>
+    </div>
+    <div class="card stage s3">
+      <div class="stage-head"><span class="tag">Etapa 3 · Gwm visuoespacial</span><span class="stage-score" id="m-cb"></span></div>
+      <h2><span class="ico">🟦</span>Blocos de Corsi</h2>
+      <p class="muted small">Sequências de blocos · cerca de 4 minutos</p>
+      <button class="btn" id="m-go-cb">Fazer etapa 3</button>
+    </div>
+    <div class="card stage s4">
+      <div class="stage-head"><span class="tag">Etapa 4 · Gs</span><span class="stage-score" id="m-gs"></span></div>
+      <h2><span class="ico">⚡</span>Velocidade de processamento</h2>
+      <p class="muted small">Símbolos e números · cerca de 3 minutos</p>
+      <button class="btn" id="m-go-gs">Fazer etapa 4</button>
+    </div>
+    <button class="btn ghost" id="b-menu-guide">Entenda o teste: etapas e pontuação</button>
+    <button class="btn ghost" id="b-menu-home">Voltar ao início</button>
+  </section>
+
+  <!-- ============ ETAPA 3: INSTRUÇÕES ============ -->
+  <section id="s-cintro" class="hidden">
+    <span class="tag s3">Etapa 3 · Gwm visuoespacial</span>
+    <h1>Blocos de Corsi</h1>
+    <div class="card">
+      <div class="info-grid">
+        <div><b>O que mede</b><span>Memória visuoespacial: guardar posições e trajetos no espaço.</span></div>
+        <div><b>Duração</b><span>2 treinos + até 16 sequências · cerca de 4 min</span></div>
+        <div><b>Como é pontuada</b><span>Pela maior sequência que você repetir (span), comparada à média de referência.</span></div>
+        <div><b>Tempo</b><span>Sem limite para responder. Responda com calma.</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Como fazer</h2>
+      <p>Na tela há 9 blocos azuis. Alguns vão <b>acender, um de cada vez</b>. Depois, toque nos mesmos blocos <b>na mesma ordem</b> em que acenderam.</p>
+      <ul class="clean">
+        <li>Os blocos acendem no ritmo de 1 por segundo.</li>
+        <li>As sequências começam com 2 blocos e aumentam aos poucos, até 9.</li>
+        <li>Há 2 tentativas por tamanho. A etapa termina quando você erra as duas do mesmo tamanho.</li>
+        <li>Não aponte com o dedo enquanto os blocos acendem: use só a memória.</li>
+      </ul>
+      <p class="muted small">Antes, 2 sequências de treino com correção.</p>
+      <button class="btn" id="b-cstart">Começar</button>
+    </div>
+  </section>
+
+  <!-- ============ ETAPA 3: TAREFA ============ -->
+  <section id="s-corsi" class="hidden">
+    <div class="topbar">
+      <span class="tag" id="c-label">Treino</span>
+      <span class="muted small" id="c-len"></span>
+    </div>
+    <p class="muted small" id="c-prompt" style="text-align:center;min-height:1.4em"></p>
+    <div class="board" id="c-board"></div>
+    <div class="feedback hidden" id="c-feedback"></div>
+    <button class="btn hidden" id="b-cnext">Continuar</button>
+  </section>
+
+  <!-- ============ ETAPA 3: RESULTADO ============ -->
+  <section id="s-cresult" class="hidden">
+    <span class="tag s3">Resultado · Etapa 3</span>
+    <h1>Blocos de Corsi</h1>
+    <div class="card" id="cr-main"></div>
+    <div class="card" id="cr-detail"></div>
+    <div class="warnbox" id="cr-warn"></div>
+    <button class="btn" id="b-cback">Voltar às etapas</button>
+  </section>
+
+  <!-- ============ ETAPA 4: INSTRUÇÕES ============ -->
+  <section id="s-sintro" class="hidden">
+    <span class="tag s4">Etapa 4 · Gs</span>
+    <h1>Velocidade de processamento</h1>
+    <div class="card">
+      <div class="info-grid">
+        <div><b>O que mede</b><span>A rapidez para fazer uma tarefa mental simples, mantendo a atenção.</span></div>
+        <div><b>Duração</b><span>3 treinos + 90 segundos de teste</span></div>
+        <div><b>Como é pontuada</b><span>Pelo número de acertos em 90 segundos, comparado à média de referência.</span></div>
+        <div><b>Tempo</b><span>Seja rápida(o), mas sem chutar: erros não contam.</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Como fazer</h2>
+      <p>Na parte de baixo da tela há uma <b>legenda</b> com 6 símbolos, cada um ligado a um número (1, 2 ou 3).</p>
+      <p>Um símbolo aparece no centro. Toque no <b>número que corresponde a ele</b> na legenda. Assim que você responder, aparece outro.</p>
+      <ul class="clean">
+        <li>A legenda fica visível o tempo todo.</li>
+        <li>Faça o máximo de associações corretas em 90 segundos.</li>
+        <li>Primeiro, 3 treinos com correção.</li>
+      </ul>
+      <button class="btn" id="b-sstart">Começar treino</button>
+    </div>
+  </section>
+
+  <!-- ============ ETAPA 4: TAREFA ============ -->
+  <section id="s-speed" class="hidden">
+    <div class="topbar">
+      <span class="tag" id="sp-label">Treino</span>
+      <span class="timer" id="sp-timer"></span>
+    </div>
+    <div class="progress"><div id="sp-bar"></div></div>
+    <div class="probe" id="sp-probe"></div>
+    <div class="feedback hidden" id="sp-feedback"></div>
+    <div class="sp-buttons" id="sp-buttons"></div>
+    <div class="legend" id="sp-legend"></div>
+    <button class="btn hidden" id="b-snext">Começar o teste (90 s)</button>
+  </section>
+
+  <!-- ============ ETAPA 4: RESULTADO ============ -->
+  <section id="s-sresult" class="hidden">
+    <span class="tag s4">Resultado · Etapa 4</span>
+    <h1>Velocidade de processamento</h1>
+    <div class="card" id="sr-main"></div>
+    <div class="card" id="sr-detail"></div>
+    <div class="warnbox" id="sr-warn"></div>
+    <button class="btn" id="b-sback">Voltar às etapas</button>
+  </section>
+
+  <!-- ============ GUIA: ENTENDA O TESTE ============ -->
+  <section id="s-guide" class="hidden">
+    <span class="tag">Guia</span>
+    <h1>Entenda o teste</h1>
+
+    <div class="card">
+      <h2>O que é o QI</h2>
+      <p>O QI (quociente de inteligência) não é uma contagem de acertos. Ele indica a sua <b>posição em relação a outras pessoas</b>: quanto o seu desempenho se afasta da média.</p>
+      <p>Os testes são construídos para que a <b>média seja 100</b> e o <b>desvio-padrão seja 15</b>. Em qualquer grupo grande, os resultados formam uma curva em forma de sino: a maioria fica perto do meio, e poucas pessoas ficam nos extremos.</p>
+    </div>
+
+    <div class="card" id="g-bands">
+      <h2>Faixas de pontuação</h2>
+      <p class="muted small">Quantas pessoas se encaixam em cada faixa, pela curva normal (média 100, desvio-padrão 15).</p>
+      <div class="row band head"><span>Pontuação</span><span>Classificação</span><span>Pessoas</span></div>
+      <div class="row band"><span>130 ou mais</span><span>Muito acima da média</span><span class="muted">≈ 2%</span></div>
+      <div class="row band"><span>120–129</span><span>Acima da média</span><span class="muted">≈ 7%</span></div>
+      <div class="row band"><span>110–119</span><span>Média superior</span><span class="muted">≈ 16%</span></div>
+      <div class="row band"><span>90–109</span><span>Média</span><span class="muted">≈ 50%</span></div>
+      <div class="row band"><span>80–89</span><span>Média inferior</span><span class="muted">≈ 16%</span></div>
+      <div class="row band"><span>70–79</span><span>Abaixo da média</span><span class="muted">≈ 7%</span></div>
+      <div class="row band"><span>69 ou menos</span><span>Muito abaixo da média</span><span class="muted">≈ 2%</span></div>
+      <h3>Em resumo</h3>
+      <ul class="clean">
+        <li><b>Metade das pessoas</b> fica entre 90 e 109.</li>
+        <li><b>Dois terços</b> ficam entre 85 e 115 (até 1 desvio-padrão da média).</li>
+        <li><b>95%</b> ficam entre 70 e 130 (até 2 desvios-padrão).</li>
+        <li>Pontuar <b>130 ou mais</b> coloca a pessoa entre os 2% mais altos, faixa costumeiramente associada a altas habilidades.</li>
+      </ul>
+      <p class="muted small">Os nomes das faixas variam um pouco entre testes e manuais. Aqui usamos nomes descritivos, sem uso diagnóstico. O percentil é outra forma de dizer o mesmo: percentil 75 significa resultado igual ou superior ao de 75% das pessoas da referência.</p>
+    </div>
+
+    <div class="card">
+      <h2>As etapas</h2>
+      <p>Os testes completos de inteligência, como o WAIS, juntam vários subtestes, cada um medindo uma habilidade diferente. Aqui seguimos a mesma ideia, usando o modelo <b>CHC (Cattell-Horn-Carroll)</b>, a teoria mais aceita sobre a estrutura das habilidades cognitivas.</p>
+
+      <h3>Etapa 1 · Raciocínio fluido (Gf) ✅</h3>
+      <ul class="clean">
+        <li><b>O que mede:</b> resolver problemas novos descobrindo regras, sem depender do que se aprendeu na escola. É a habilidade mais próxima da inteligência geral.</li>
+        <li><b>Tarefa:</b> 20 matrizes 3×3; escolher a peça que completa o padrão.</li>
+        <li><b>Pontuação:</b> Teoria de Resposta ao Item. Cada questão tem uma dificuldade conhecida, e o teste estima seu nível pelas questões que você acertou e errou. Depois, compara com pessoas da sua idade.</li>
+        <li><b>Régua:</b> 1.501 adultos dos EUA (MaRs-IB), com ajuste por idade.</li>
+      </ul>
+
+      <h3>Etapa 2 · Memória de trabalho (Gwm) ✅</h3>
+      <ul class="clean">
+        <li><b>O que mede:</b> quanta informação você consegue guardar (ordem direta) e guardar e manipular ao mesmo tempo (ordem inversa).</li>
+        <li><b>Tarefa:</b> memorizar sequências de números e digitá-las.</li>
+        <li><b>Pontuação:</b> o tamanho da maior sequência lembrada (span), comparado à média de referência e convertido para a escala 100/15.</li>
+        <li><b>Régua:</b> cerca de 9.800 (direta) e 6.200 (inversa) pessoas do TestMyBrain, com o mesmo procedimento.</li>
+      </ul>
+
+      <h3>Etapa 3 · Memória visuoespacial (Gwm) ✅</h3>
+      <ul class="clean">
+        <li><b>O que mede:</b> memória para posições e trajetos no espaço.</li>
+        <li><b>Tarefa:</b> Blocos de Corsi; repetir a ordem em que os blocos acendem.</li>
+        <li><b>Pontuação:</b> a maior sequência repetida (span), comparada à média de referência e convertida para a escala 100/15.</li>
+        <li><b>Régua:</b> padronização de Kessels et al. (2000), com 70 adultos de 18 a 72 anos. É a régua mais aproximada da bateria. Existe norma brasileira (Bahia, 2021), mas os valores não estão acessíveis em formato utilizável.</li>
+      </ul>
+
+      <h3>Etapa 4 · Velocidade de processamento (Gs) ✅</h3>
+      <ul class="clean">
+        <li><b>O que mede:</b> rapidez para realizar tarefas mentais simples com atenção.</li>
+        <li><b>Tarefa:</b> associar símbolos a números o mais rápido possível durante 90 segundos, como no subteste Código do WAIS.</li>
+        <li><b>Pontuação:</b> número de acertos em 90 segundos, comparado à média de referência e convertido para a escala 100/15.</li>
+        <li><b>Régua:</b> 36.000 pessoas do TestMyBrain, com o mesmo procedimento. Sem ajuste por idade (a norma publicada não traz valores por idade).</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>Como as etapas se relacionam</h2>
+      <ul class="clean">
+        <li><b>Cada etapa é independente.</b> Uma não altera a pontuação da outra, e você pode fazê-las em qualquer ordem.</li>
+        <li><b>Todas usam a mesma escala</b> (média 100, desvio-padrão 15). Por isso dá para colocar os resultados lado a lado e ver seu <b>perfil</b>: em que você vai melhor e em que vai menos bem.</li>
+        <li><b>Elas costumam andar juntas.</b> Quem vai bem em uma habilidade tende a ir bem nas outras (a "variedade positiva", descoberta por Spearman em 1904). É daí que vem a ideia de inteligência geral.</li>
+        <li><b>Mas não são iguais.</b> É comum ter diferenças de 10 a 20 pontos entre domínios. Isso descreve o perfil da pessoa e não é, por si só, sinal de problema.</li>
+      </ul>
+      <h3>E o QI geral?</h3>
+      <p>Um QI geral junta os domínios num índice só. Para fazer isso corretamente, não basta tirar a média: é preciso saber o quanto os subtestes se correlacionam entre si, porque isso muda o tamanho da escala. Esse índice será calculado quando as etapas 3 e 4 estiverem prontas e com essa informação verificada. Até lá, o app mostra o seu <b>perfil por domínio</b>.</p>
+      <p class="muted small">Domínios que este app não mede: conhecimento e vocabulário (Gc), por dependerem muito do idioma e da cultura e não haver normas brasileiras abertas, e processamento visual (Gv), por falta de normas abertas confiáveis.</p>
+    </div>
+
+    <div class="card">
+      <h2>Boas práticas</h2>
+      <ul class="clean">
+        <li>Faça cada etapa descansada(o), num lugar tranquilo, sem interrupções.</li>
+        <li>Use o celular na vertical e com o brilho adequado.</li>
+        <li>O resultado da primeira tentativa é o mais representativo. Repetir o teste tende a aumentar a pontuação por familiaridade.</li>
+        <li>Todo resultado é uma estimativa com margem de erro, sem validade clínica.</li>
+      </ul>
+    </div>
+
+    <button class="btn ghost" id="b-guide-about">Ver a fundamentação científica completa</button>
+    <button class="btn" id="b-guide-back">Voltar</button>
+  </section>
+
+  <!-- ============ ETAPA 2: INSTRUÇÕES ============ -->
+  <section id="s-dintro" class="hidden">
+    <span class="tag s2" id="d-intro-tag">Etapa 2 · Parte 1 de 2</span>
+    <h1 id="d-intro-title">Ordem direta</h1>
+    <div class="card">
+      <div class="info-grid">
+        <div><b>O que mede</b><span id="d-intro-measure"></span></div>
+        <div><b>Duração</b><span>2 treinos + até 20 sequências · cerca de 3 min</span></div>
+        <div><b>Como é pontuada</b><span>Pela maior sequência que você lembrar (span), comparada à média de referência.</span></div>
+        <div><b>Tempo</b><span>Sem limite para digitar. Responda com calma.</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Como fazer</h2>
+      <p id="d-intro-text"></p>
+      <ul class="clean">
+        <li>Os números aparecem <b>um de cada vez</b>, por 1 segundo cada.</li>
+        <li>Depois, digite-os no teclado da tela. Ao completar a quantidade, a resposta é enviada.</li>
+        <li>As sequências começam com 2 números e aumentam aos poucos, até no máximo 11.</li>
+        <li>Há 2 tentativas por tamanho. A parte termina quando você erra as duas do mesmo tamanho.</li>
+        <li>Não anote nem fale em voz alta: use só a memória.</li>
+      </ul>
+      <p class="muted small">Antes, 2 sequências de treino com correção.</p>
+      <button class="btn" id="b-dstart">Começar</button>
+    </div>
+  </section>
+
+  <!-- ============ ETAPA 2: TAREFA ============ -->
+  <section id="s-digit" class="hidden">
+    <div class="topbar">
+      <span class="tag" id="d-label">Treino</span>
+      <span class="muted small" id="d-len"></span>
+    </div>
+    <div class="digit-stage" id="d-show"></div>
+    <div id="d-answer" class="hidden">
+      <p class="muted small" id="d-prompt" style="text-align:center"></p>
+      <div class="slots" id="d-slots"></div>
+      <div class="keypad" id="d-keypad"></div>
+    </div>
+    <div class="feedback hidden" id="d-feedback"></div>
+    <button class="btn hidden" id="b-dnext">Continuar</button>
+  </section>
+
+  <!-- ============ ETAPA 2: RESULTADO ============ -->
+  <section id="s-dresult" class="hidden">
+    <span class="tag s2">Resultado · Etapa 2</span>
+    <h1>Memória de dígitos</h1>
+    <div class="card" id="dr-main"></div>
+    <div class="card" id="dr-detail"></div>
+    <div class="warnbox" id="dr-warn"></div>
+    <button class="btn" id="b-dback">Voltar às etapas</button>
+  </section>
+
+  <!-- ============ INSTRUÇÕES / TREINO ============ -->
+  <section id="s-intro" class="hidden">
+    <span class="tag s1">Etapa 1 · Gf</span>
+    <h1>Raciocínio fluido</h1>
+    <div class="card">
+      <div class="info-grid">
+        <div><b>O que mede</b><span>Sua capacidade de descobrir regras e resolver problemas novos.</span></div>
+        <div><b>Duração</b><span>3 treinos + 20 matrizes · cerca de 8 min</span></div>
+        <div><b>Como é pontuada</b><span>Pela dificuldade das questões que você acerta (TRI), comparada a pessoas da sua idade.</span></div>
+        <div><b>Tempo</b><span>Até 30 s por matriz. Se não souber, chute.</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Como fazer</h2>
+      <p>Em cada matriz, as figuras mudam seguindo <b>regras</b> ao longo das linhas e das colunas. Uma regra pode mudar a <b>forma</b>, a <b>cor</b>, o <b>tamanho</b> ou a <b>posição</b> de uma figura.</p>
+      <p>Descubra as regras e escolha, entre as 4 opções, a peça que completa o canto inferior direito.</p>
+      <p class="muted">Você fará 3 matrizes de treino, com correção. Elas não contam na pontuação.</p>
+      <button class="btn" id="b-practice">Fazer o treino</button>
+    </div>
+  </section>
+
+  <!-- ============ TESTE ============ -->
+  <section id="s-test" class="hidden">
+    <div class="topbar">
+      <span class="tag" id="t-label">Item 1 de 20</span>
+      <span class="timer" id="t-timer"></span>
+    </div>
+    <div class="progress"><div id="t-bar"></div></div>
+    <div id="t-fix" class="fix hidden">+</div>
+    <div id="t-stage">
+      <div class="matrix" id="t-matrix"></div>
+      <div class="opts" id="t-opts"></div>
+    </div>
+    <div class="feedback hidden" id="t-feedback"></div>
+    <button class="btn hidden" id="b-next">Continuar</button>
+  </section>
+
+  <!-- ============ PRONTO PARA O TESTE ============ -->
+  <section id="s-ready" class="hidden">
+    <span class="tag">Treino concluído</span>
+    <h1>Agora é para valer</h1>
+    <div class="card">
+      <ul class="clean">
+        <li>São 20 matrizes, sem correção durante o teste.</li>
+        <li>Responda com cuidado, mas se o tempo estiver acabando, chute.</li>
+        <li>Respostas muito rápidas (menos de 3 segundos) são tratadas como chute aleatório e não entram no cálculo.</li>
+      </ul>
+      <button class="btn" id="b-real">Iniciar o teste</button>
+    </div>
+  </section>
+
+  <!-- ============ RESULTADO ============ -->
+  <section id="s-result" class="hidden">
+    <span class="tag s1">Resultado · Etapa 1</span>
+    <h1>Sua estimativa</h1>
+    <div class="card" id="r-main"></div>
+    <div class="card" id="r-scale"></div>
+    <div class="card" id="r-detail"></div>
+    <div class="warnbox" id="r-warn"></div>
+    <button class="btn" id="b-again">Voltar às etapas</button>
+  </section>
+
+  <!-- ============ HISTÓRICO ============ -->
+  <section id="s-history" class="hidden">
+    <span class="tag">Histórico</span>
+    <h1>Resultados anteriores</h1>
+    <div class="card" id="h-list"></div>
+    <div class="warnbox">Refazer o teste muitas vezes tende a aumentar a pontuação por familiaridade com o formato (efeito de prática). O resultado mais representativo costuma ser o da primeira tentativa.</div>
+    <button class="btn ghost" id="b-clear">Apagar histórico</button>
+    <button class="btn" id="b-back1">Voltar</button>
+  </section>
+
+  <!-- ============ SOBRE ============ -->
+  <section id="s-about" class="hidden">
+    <span class="tag">Fundamentação</span>
+    <h1>A ciência por trás</h1>
+
+    <div class="card">
+      <h2>O que é medido</h2>
+      <p>O teste mede o <b>raciocínio fluido (Gf)</b>, a capacidade de resolver problemas novos descobrindo regras, sem depender de conhecimento escolar. No modelo Cattell-Horn-Carroll (CHC), o Gf é a habilidade ampla mais próxima do fator geral de inteligência (<i>g</i>). Matrizes são a tarefa clássica para medi-lo.</p>
+      <p>Não há itens verbais, porque eles dependem mais do idioma, da cultura e da escolarização.</p>
+    </div>
+
+    <div class="card">
+      <h2>Como os itens são criados</h2>
+      <p>Cada matriz é gerada na hora por um algoritmo, seguindo a lógica de regras descrita por Carpenter, Just e Shell (1990): atributos (forma, cor, tamanho, posição) mudam ao longo das linhas, das colunas ou de ambas ("distribuição de três").</p>
+      <p>As respostas erradas são variações mínimas da resposta certa, com um único atributo trocado (tipo "MD" no MaRs-IB).</p>
+    </div>
+
+    <div class="card">
+      <h2>Como a dificuldade é calculada</h2>
+      <p>No MaRs-IB, a dificuldade dos itens é prevista de forma robusta pela complexidade: o número de elementos e o número de regras. Usamos os parâmetros publicados de 192 itens calibrados com 1.501 adultos para estimar a dificuldade de cada combinação (elementos × regras), com encolhimento estatístico (bayes empírico) em direção a um modelo de regressão.</p>
+      <p>Como nossos itens são novos, existe incerteza sobre a dificuldade exata de cada um. Ela é incorporada ao cálculo (desvio-padrão de 1,0 na dificuldade), o que torna as margens de erro <b>mais largas e mais honestas</b>.</p>
+    </div>
+
+    <div class="card">
+      <h2>Como a pontuação é calculada</h2>
+      <ul class="clean">
+        <li><b>Modelo:</b> TRI de 3 parâmetros (dificuldade, discriminação e chute de 25%, já que há 4 opções), o mesmo do MaRs-IB.</li>
+        <li><b>Estimativa:</b> EAP (média a posteriori), com distribuição prévia normal padrão.</li>
+        <li><b>Teste adaptativo:</b> cada item é escolhido para trazer o máximo de informação no seu nível estimado.</li>
+        <li><b>Escala:</b> a habilidade é comparada à média da sua idade e convertida para QI (média 100, desvio-padrão 15), com intervalo de 95% e percentil.</li>
+        <li><b>Chutes rápidos:</b> respostas com menos de 3 segundos são descartadas (critério do MaRs-IB).</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>Comparação por idade</h2>
+      <p>Assim como nas escalas Wechsler, o QI é um <b>QI de desvio</b>: indica o quanto você se afasta da média de pessoas da <b>sua idade</b>. Isso importa porque o raciocínio fluido muda ao longo da vida: sobe na adolescência, chega ao pico no início da vida adulta e depois declina gradualmente.</p>
+      <p>A norma por idade foi estimada com os dados individuais da calibração do MaRs-IB (1.496 adultos de 18 a 74 anos), por meio de uma regressão latente com termo quadrático. Nessa amostra, a habilidade média cai cerca de 0,04 desvio-padrão por ano por volta dos 30 anos, e a queda se suaviza com a idade.</p>
+      <p class="muted small">Ressalva: os dados são transversais (pessoas diferentes em cada idade) e há poucos participantes acima de 55 anos, então a norma é menos precisa nessa faixa.</p>
+    </div>
+
+    <div class="card">
+      <h2>Por que o teste é adaptativo</h2>
+      <p>Num teste adaptativo, cada questão é escolhida conforme as respostas anteriores. Assim, ninguém perde tempo com questões fáceis ou impossíveis demais para o próprio nível. É o mesmo princípio usado em exames como o GRE.</p>
+      <p>Isso <b>não prejudica</b> o resultado, porque a TRI leva em conta a dificuldade de cada questão respondida: acertar uma questão difícil vale mais do que acertar uma fácil. Em 3.000 simulações com 20 questões, o modo adaptativo errou cerca de 10% menos que um teste fixo, e 15% menos nos níveis mais baixos.</p>
+    </div>
+
+    <div class="card">
+      <h2>E o tempo de resposta?</h2>
+      <p>No modelo CHC, a <b>velocidade de processamento (Gs)</b> é uma habilidade diferente do raciocínio fluido (Gf). No WAIS, por exemplo, ela é medida por tarefas próprias e simples (Código, Procurar Símbolos), não pela velocidade nas matrizes.</p>
+      <p>Nas matrizes, rapidez e precisão competem entre si: quem vai mais devagar costuma acertar mais. Misturar o tempo na nota exigiria um modelo validado para isso, que estes itens não têm. Por isso o tempo tem um limite (30 s), aparece no resultado como informação e não altera a pontuação.</p>
+    </div>
+
+    <div class="card">
+      <h2>Limitações (leia!)</h2>
+      <ul class="clean">
+        <li><b>Não há normas brasileiras.</b> A régua de comparação é a amostra de calibração do MaRs-IB: adultos dos EUA, de 18 a 74 anos (média de 28,7), com escolaridade acima da média. A comparação por idade usa essa mesma amostra.</li>
+        <li>Mede só um domínio (Gf). Um QI completo, como o do WAIS, combina vários domínios.</li>
+        <li>A dificuldade dos itens é <b>prevista</b>, não calibrada empiricamente com estes itens.</li>
+        <li>Nenhum teste é totalmente livre de cultura, nem mesmo os não verbais.</li>
+        <li>Não tem validade clínica e não substitui avaliação psicológica (no Brasil, os testes psicológicos são de uso privativo do psicólogo e precisam de aprovação no SATEPSI).</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>Referências</h2>
+      <p class="ref"><b>Zorowitz, S., Chierchia, G., Blakemore, S.-J., & Daw, N. D. (2024).</b> An item response theory analysis of the matrix reasoning item bank (MaRs-IB). <i>Behavior Research Methods, 56</i>(3), 1104–1122. doi:10.3758/s13428-023-02067-8</p>
+      <p class="ref"><b>Chierchia, G., et al. (2019).</b> The matrix reasoning item bank (MaRs-IB): novel, open-access abstract reasoning items for adolescents and adults. <i>Royal Society Open Science, 6</i>, 190232. doi:10.1098/rsos.190232</p>
+      <p class="ref"><b>Carpenter, P. A., Just, M. A., & Shell, P. (1990).</b> What one intelligence test measures: A theoretical account of the processing in the Raven Progressive Matrices Test. <i>Psychological Review, 97</i>(3), 404–431.</p>
+      <p class="ref"><b>Koch, M., Spinath, F. M., Greiff, S., & Becker, N. (2022).</b> Development and validation of the Open Matrices Item Bank. <i>Journal of Intelligence, 10</i>(3), 41. doi:10.3390/jintelligence10030041</p>
+      <p class="ref"><b>Schneider, W. J., & McGrew, K. S. (2012).</b> The Cattell-Horn-Carroll model of intelligence. In D. P. Flanagan & P. L. Harrison (Eds.), <i>Contemporary Intellectual Assessment</i> (3rd ed., pp. 99–144). Guilford.</p>
+      <p class="ref"><b>Singh, S., Strong, R. W., Jung, L., et al., & Germine, L. (2021).</b> The TestMyBrain Digital Neuropsychology Toolkit: Development and psychometric characteristics. <i>Journal of Clinical and Experimental Neuropsychology, 43</i>(8), 786–795. doi:10.1080/13803395.2021.2002269 <i>(normas da etapa 2)</i></p>
+      <p class="ref"><b>Zimmermann, N., Cardoso, C. O., Trentini, C. M., Grassi-Oliveira, R., & Fonseca, R. P. (2015).</b> Brazilian preliminary norms and investigation of age and education effects on the Modified Wisconsin Card Sorting Test, Stroop Color and Word test and Digit Span test in adults. <i>Dementia & Neuropsychologia, 9</i>(2), 120–127.</p>
+      <p class="ref"><b>Kessels, R. P. C., van Zandvoort, M. J. E., Postma, A., Kappelle, L. J., & de Haan, E. H. F. (2000).</b> The Corsi Block-Tapping Task: Standardization and normative data. <i>Applied Neuropsychology, 7</i>(4), 252–258. doi:10.1207/S15324826AN0704_8 <i>(normas da etapa 3)</i></p>
+      <p class="ref"><b>Brunetti, R., Del Gatto, C., & Delogu, F. (2014).</b> eCorsi: implementation and testing of the Corsi block-tapping task for digital tablets. <i>Frontiers in Psychology, 5</i>, 939.</p>
+      <p class="ref"><b>Gomes de Santana, Y. E., et al., & Abreu, N. (2021).</b> Normas do Cubos de Corsi para população adulta. <i>Revista Neuropsicologia Latinoamericana, 13</i>(2).</p>
+      <p class="ref"><b>Hartshorne, J. K., & Germine, L. T. (2015).</b> When does cognitive functioning peak? The asynchronous rise and fall of different cognitive abilities across the lifespan. <i>Psychological Science, 26</i>(4), 433–443.</p>
+      <p class="ref"><b>Wainer, H. (Ed.) (2000).</b> <i>Computerized Adaptive Testing: A Primer</i> (2nd ed.). Lawrence Erlbaum.</p>
+      <p class="ref"><b>Embretson, S. E. (1998).</b> A cognitive design system approach to generating valid tests. <i>Psychological Methods, 3</i>(3), 380–396.</p>
+      <p class="ref"><b>Gonthier, C. (2022).</b> Cross-cultural differences in visuo-spatial processing and the culture-fairness of visuo-spatial intelligence tests. <i>Cognitive Research: Principles and Implications, 7</i>, 11.</p>
+      <p class="ref"><b>Conselho Federal de Psicologia (2022).</b> Resolução CFP nº 31/2022 (diretrizes para avaliação psicológica e SATEPSI).</p>
+    </div>
+    <button class="btn" id="b-back2">Voltar</button>
+  </section>
+
+</div>
+
+<script id="engine">
+/* =====================================================================
+   MOTOR PSICOMÉTRICO
+   ===================================================================== */
+
+// Dificuldade (β) por combinação de elementos × regras, estimada a partir
+// dos parâmetros publicados do MaRs-IB (Zorowitz et al., 2024; itens tipo MD, n = 192).
+// Encolhimento bayes empírico entre média observada e regressão
+// β = -2.617 + 0.511·elementos + 0.609·regras.
+const COMBOS = [
+  { ne: 1, nr: 2, beta: -1.619 },
+  { ne: 1, nr: 3, beta:  0.165 },
+  { ne: 1, nr: 4, beta: -0.010 },
+  { ne: 2, nr: 2, beta: -1.011 },
+  { ne: 2, nr: 3, beta:  0.853 },
+  { ne: 2, nr: 4, beta:  1.087 },
+  { ne: 2, nr: 5, beta:  1.977 },
+  { ne: 2, nr: 6, beta:  1.011 },
+  { ne: 3, nr: 1, beta: -1.489 },
+  { ne: 3, nr: 2, beta: -0.154 },
+  { ne: 3, nr: 3, beta:  1.805 },
+  { ne: 3, nr: 4, beta:  1.855 },
+  { ne: 3, nr: 5, beta:  1.819 },
+  { ne: 3, nr: 6, beta:  1.883 },
+  { ne: 4, nr: 2, beta:  0.380 },
+  { ne: 4, nr: 3, beta:  1.545 },
+  { ne: 4, nr: 4, beta:  1.821 },
+  { ne: 4, nr: 5, beta:  2.166 }
+];
+const ALPHA = 1.239;      // discriminação média dos itens MD do MaRs-IB
+const GAMMA = 0.25;       // chute: 4 opções
+const SIGMA_BETA = 1.0;   // incerteza sobre a dificuldade de um item novo
+// Marginalização da incerteza (aproximação logística-normal):
+// E[logit⁻¹(x)] ≈ logit⁻¹(x / sqrt(1 + π²σ²/8))
+const KAPPA = 1 / Math.sqrt(1 + (Math.PI * Math.PI * SIGMA_BETA * SIGMA_BETA) / 8);
+
+// Norma por idade: regressão latente θ ~ N(μ(idade), σ²) estimada com os dados
+// individuais da calibração do MaRs-IB (N = 1.496 com idade informada; 18–74 anos).
+// Modelo quadrático (melhor ajuste que o linear; teste de razão de verossimilhança, p ≈ 0,03):
+// μ(idade) = 0,0027 − 0,04283 × (idade − 30) + 0,00051 × (idade − 30)²; σ = 0,966
+const AGE_MU0 = 0.0027;
+const AGE_SLOPE = -0.04283;
+const AGE_QUAD = 0.00051;
+const AGE_CENTER = 30;
+const AGE_SD = 0.966;
+const AGE_MIN = 18;
+const AGE_MAX = 74;
+
+function ageNorm(age) {
+  const a = Math.max(AGE_MIN, Math.min(AGE_MAX, age)) - AGE_CENTER;
+  return { mu: AGE_MU0 + AGE_SLOPE * a + AGE_QUAD * a * a, sd: AGE_SD };
+}
+
+const N_ITEMS = 20;
+const TIME_LIMIT = 30;    // segundos por item (protocolo do MaRs-IB)
+const RAPID_GUESS = 3;    // segundos (critério de chute rápido do MaRs-IB)
+
+function pCorrect(theta, beta) {
+  const x = KAPPA * (ALPHA * theta - beta);
+  return GAMMA + (1 - GAMMA) / (1 + Math.exp(-x));
+}
+
+function itemInfo(theta, beta) {
+  const p = pCorrect(theta, beta);
+  const a = KAPPA * ALPHA;
+  const q = 1 - p;
+  return (a * a) * (q / p) * Math.pow((p - GAMMA) / (1 - GAMMA), 2);
+}
+
+// Grade de θ para a estimativa EAP
+const GRID = [];
+for (let t = -4; t <= 4.0001; t += 0.02) GRID.push(+t.toFixed(2));
+const PRIOR = GRID.map(t => Math.exp(-0.5 * t * t));
+
+function estimate(responses) {
+  // responses: [{beta, correct}] (somente as válidas)
+  const logPost = GRID.map((t, i) => {
+    let lp = Math.log(PRIOR[i]);
+    for (const r of responses) {
+      const p = pCorrect(t, r.beta);
+      lp += r.correct ? Math.log(p) : Math.log(1 - p);
+    }
+    return lp;
+  });
+  const m = Math.max(...logPost);
+  const w = logPost.map(v => Math.exp(v - m));
+  const s = w.reduce((a, b) => a + b, 0);
+  let mean = 0;
+  GRID.forEach((t, i) => { mean += t * w[i] / s; });
+  let v = 0;
+  GRID.forEach((t, i) => { v += (t - mean) * (t - mean) * w[i] / s; });
+  return { theta: mean, se: Math.sqrt(v) };
+}
+
+function normCdf(z) {
+  // Abramowitz & Stegun 7.1.26
+  const sign = z < 0 ? -1 : 1;
+  const x = Math.abs(z) / Math.SQRT2;
+  const t = 1 / (1 + 0.3275911 * x);
+  const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+  return 0.5 * (1 + sign * y);
+}
+
+function chooseCombo(theta, recent, rng) {
+  // Escolhe a combinação de maior informação no θ atual,
+  // sorteando entre as 3 melhores e evitando repetir as últimas 2.
+  const ranked = COMBOS
+    .map(c => ({ c, info: itemInfo(theta, c.beta) }))
+    .filter(o => !recent.slice(-2).some(r => r.ne === o.c.ne && r.nr === o.c.nr))
+    .sort((a, b) => b.info - a.info);
+  const top = ranked.slice(0, 3);
+  return top[Math.floor(rng() * top.length)].c;
+}
+
+/* =====================================================================
+   GERADOR DE MATRIZES (regras de Carpenter, Just & Shell, 1990)
+   ===================================================================== */
+
+const SHAPES = ['circle', 'square', 'triangle', 'diamond', 'hexagon', 'cross'];
+// Paleta Okabe-Ito (segura para daltonismo)
+const COLORS = ['#E69F00', '#56B4E9', '#009E73', '#CC79A7', '#0072B2', '#D55E00'];
+const SIZES = [6, 9, 12];
+const SLOT_XY = [22, 50, 78];
+// Linhas possíveis da sub-grade 3×3 dentro de cada célula (para a regra de posição)
+const PATHS = [
+  [0, 1, 2], [3, 4, 5], [6, 7, 8],
+  [0, 3, 6], [1, 4, 7], [2, 5, 8],
+  [0, 4, 8], [2, 4, 6]
+];
+const ATTRS = ['shape', 'color', 'size', 'pos'];
+
+function makeRng(seed) {
+  let s = seed >>> 0 || 1;
+  return function () {
+    s ^= s << 13; s >>>= 0;
+    s ^= s >>> 17;
+    s ^= s << 5; s >>>= 0;
+    return s / 4294967296;
+  };
+}
+
+function shuffle(arr, rng) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function pick(arr, n, rng) { return shuffle(arr, rng).slice(0, n); }
+
+// Índice do valor (0,1,2) de um atributo na célula (r, c)
+function ruleIndex(rule, r, c) {
+  if (rule.type === 0) return 0;
+  if (rule.type === 1) return rule.dir === 'row' ? c : r;
+  return (r + c) % 3; // tipo 2: muda nas linhas e nas colunas (distribuição de três)
+}
+
+function cellContent(item, r, c) {
+  return item.elements.map(el => {
+    const v = {};
+    for (const a of ATTRS) v[a] = el.values[a][ruleIndex(el.rules[a], r, c)];
+    return v;
+  });
+}
+
+function slotsOf(cell) { return cell.map(e => e.pos); }
+function hasCollision(cell) { return new Set(slotsOf(cell)).size !== cell.length; }
+function cellKey(cell) {
+  return cell.map(e => `${e.shape}|${e.color}|${e.size}|${e.pos}`).sort().join(';');
+}
+
+function generateItem(combo, rng) {
+  for (let attempt = 0; attempt < 500; attempt++) {
+    const item = tryGenerate(combo, rng);
+    if (item) return item;
+  }
+  throw new Error('Falha ao gerar item');
+}
+
+function tryGenerate(combo, rng) {
+  const { ne, nr } = combo;
+  // Sorteia quais (elemento, atributo) recebem regra
+  const slotsAll = [];
+  for (let e = 0; e < ne; e++) for (const a of ATTRS) slotsAll.push([e, a]);
+  const ruled = pick(slotsAll, nr, rng);
+  const isRuled = (e, a) => ruled.some(([ee, aa]) => ee === e && aa === a);
+
+  // Sorteia, para cada elemento, as regras e os 3 valores de cada atributo.
+  const elements = [];
+  for (let e = 0; e < ne; e++) {
+    const rules = {};
+    const values = {};
+    for (const a of ATTRS) {
+      if (isRuled(e, a)) {
+        const type = rng() < 0.5 ? 1 : 2;
+        rules[a] = { type, dir: rng() < 0.5 ? 'row' : 'col' };
+      } else {
+        rules[a] = { type: 0 };
+      }
+      if (a === 'shape') values.shape = pick(SHAPES, 3, rng);
+      if (a === 'color') values.color = pick(COLORS, 3, rng);
+      if (a === 'size') values.size = shuffle([0, 1, 2], rng);
+      if (a === 'pos') {
+        if (rules.pos.type === 0) {
+          const s = Math.floor(rng() * 9);
+          values.pos = [s, s, s];
+        } else {
+          values.pos = shuffle(PATHS[Math.floor(rng() * PATHS.length)], rng);
+        }
+      }
+    }
+    // Elementos únicos sem regra de posição ficam no centro
+    if (ne === 1 && rules.pos.type === 0) values.pos = [4, 4, 4];
+    elements.push({ rules, values });
+  }
+  const item = { combo, elements };
+
+  // Verifica colisões em todas as 9 células
+  const cells = [];
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
+    const cell = cellContent(item, r, c);
+    if (hasCollision(cell)) return null;
+    cells.push(cell);
+  }
+  // As 8 células visíveis não podem ser todas idênticas à resposta
+  const answer = cells[8];
+
+  // Distratores tipo MD: a resposta com UM atributo de UM elemento trocado
+  const candidates = [];
+  answer.forEach((el, ei) => {
+    for (const a of ATTRS) {
+      let pool;
+      if (a === 'shape') pool = SHAPES;
+      else if (a === 'color') pool = COLORS;
+      else if (a === 'size') pool = [0, 1, 2];
+      else pool = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+      // Prioriza valores que aparecem na própria matriz (mais plausíveis)
+      const inMatrix = item.elements[ei].values[a];
+      const preferred = pool.filter(v => inMatrix.includes(v) && v !== el[a]);
+      const others = pool.filter(v => !inMatrix.includes(v) && v !== el[a]);
+      const ordered = shuffle(preferred, rng).concat(shuffle(others, rng));
+      if (ordered.length) {
+        const alt = answer.map(x => ({ ...x }));
+        alt[ei][a] = ordered[0];
+        candidates.push({ cell: alt, weight: item.elements[ei].rules[a].type > 0 ? 2 : 1 });
+      }
+    }
+  });
+  // Ordena: primeiro trocas em atributos governados por regra
+  const sortedCands = shuffle(candidates, rng).sort((x, y) => y.weight - x.weight);
+  const distractors = [];
+  const seen = new Set([cellKey(answer)]);
+  for (const cd of sortedCands) {
+    if (distractors.length === 3) break;
+    if (hasCollision(cd.cell)) continue;
+    const k = cellKey(cd.cell);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    distractors.push(cd.cell);
+  }
+  if (distractors.length < 3) return null;
+
+  const options = shuffle([{ cell: answer, correct: true }].concat(distractors.map(d => ({ cell: d, correct: false }))), rng);
+  return {
+    combo,
+    beta: combo.beta,
+    cells: cells.slice(0, 8),
+    options,
+    answerIndex: options.findIndex(o => o.correct)
+  };
+}
+
+/* =====================================================================
+   ETAPA 2: SPAN DE DÍGITOS (procedimento TestMyBrain)
+   Norma: amostra TestMyBrain (Singh et al., 2021, Tabela 3)
+   ===================================================================== */
+const DS_NORMS = {
+  fwd: { mean: 6.43, sd: 1.58, n: 9858 },
+  bwd: { mean: 5.33, sd: 1.58, n: 6269 }
+};
+const DS_MIN_LEN = 2;
+const DS_MAX_LEN = 11;
+const DS_DIGIT_MS = 1000;
+
+function dsSequence(len, rng) {
+  // Dígitos de 0 a 9, sem repetição imediata (para não confundir dois números iguais seguidos)
+  const seq = [];
+  while (seq.length < len) {
+    const d = Math.floor(rng() * 10);
+    if (seq.length && seq[seq.length - 1] === d) continue;
+    seq.push(d);
+  }
+  return seq;
+}
+
+function dsExpected(seq, mode) {
+  return mode === 'bwd' ? seq.slice().reverse() : seq.slice();
+}
+
+// Controle adaptativo: 2 tentativas por tamanho; avança se acertar ao menos 1; para se errar as 2.
+function dsNewRun() {
+  return { len: DS_MIN_LEN, trial: 0, correctAtLen: 0, span: 0, numCorrect: 0, done: false };
+}
+function dsRecord(run, correct, maxLen) {
+  const max = maxLen || DS_MAX_LEN;
+  if (correct) { run.correctAtLen++; run.numCorrect++; }
+  run.trial++;
+  if (run.trial < 2) return run;
+  if (run.correctAtLen >= 1) {
+    run.span = run.len;
+    if (run.len >= max) { run.done = true; return run; }
+    run.len++;
+    run.trial = 0;
+    run.correctAtLen = 0;
+  } else {
+    run.done = true;
+  }
+  return run;
+}
+
+function dsIndex(span, mode) {
+  const n = DS_NORMS[mode];
+  const z = (span - n.mean) / n.sd;
+  return { z, index: Math.round(Math.max(40, Math.min(160, 100 + 15 * z))), pct: Math.round(normCdf(z) * 100) };
+}
+
+/* =====================================================================
+   ETAPA 4: PAREAMENTO SÍMBOLO-DÍGITO (procedimento TestMyBrain)
+   Norma: amostra TestMyBrain (Singh et al., 2021, Tabela 3)
+   ===================================================================== */
+const SP_NORM = { mean: 51.87, sd: 12.20, n: 36000 };
+const SP_DURATION = 90;       // segundos de teste
+const SP_PRACTICE = 3;        // treinos
+const SP_PRACTICE_LIMIT = 5;  // segundos por treino
+
+// 6 símbolos abstratos de traços (no estilo do subteste Código), desenhados numa caixa 40×40
+const SP_GLYPHS = [
+  'M8 32 L20 8 L32 32',                 // Λ
+  'M8 32 H32 M20 32 V8',                // ⊥
+  'M8 14 H32 M8 26 H32',                // =
+  'M9 9 L31 31 M31 9 L9 31',            // X
+  'M10 10 H30 V30 H10 Z',               // □
+  'M10 8 V22 Q20 36 30 22 V8'           // U
+];
+
+function spIndex(score) {
+  const z = (score - SP_NORM.mean) / SP_NORM.sd;
+  return { z, index: Math.round(Math.max(40, Math.min(160, 100 + 15 * z))), pct: Math.round(normCdf(z) * 100) };
+}
+
+// Mapeamento aleatório: cada dígito (1–3) recebe 2 símbolos
+function spMapping(rng) {
+  const order = shuffle([0, 1, 2, 3, 4, 5], rng);
+  return order.map((g, i) => ({ glyph: g, digit: Math.floor(i / 2) + 1 }));
+}
+
+// Próximo símbolo-alvo, sem repetir o anterior
+function spNextProbe(prev, rng) {
+  let g;
+  do { g = Math.floor(rng() * 6); } while (g === prev);
+  return g;
+}
+
+/* =====================================================================
+   ETAPA 3: BLOCOS DE CORSI (procedimento padronizado de Kessels et al., 2000)
+   Norma: adultos saudáveis, span médio 6,2 (DP 1,3), 18–72 anos
+   ===================================================================== */
+const CB_NORM = { mean: 6.2, sd: 1.3, n: 70 };
+const CB_MIN_LEN = 2;
+const CB_MAX_LEN = 9;
+const CB_ON_MS = 700;    // bloco aceso
+const CB_OFF_MS = 300;   // intervalo (ritmo de 1 bloco por segundo)
+// 9 blocos em posições irregulares fixas (tabuleiro 300 × 340)
+const CB_BLOCKS = [
+  { x: 30, y: 30 }, { x: 200, y: 18 }, { x: 118, y: 88 },
+  { x: 22, y: 165 }, { x: 222, y: 128 }, { x: 128, y: 196 },
+  { x: 48, y: 268 }, { x: 214, y: 246 }, { x: 132, y: 290 }
+];
+const CB_SIZE = 48;
+
+function cbSequence(len, rng) {
+  // Blocos sem repetição dentro da mesma sequência
+  return shuffle([0, 1, 2, 3, 4, 5, 6, 7, 8], rng).slice(0, len);
+}
+
+function cbIndex(span) {
+  const z = (span - CB_NORM.mean) / CB_NORM.sd;
+  return { z, index: Math.round(Math.max(40, Math.min(160, 100 + 15 * z))), pct: Math.round(normCdf(z) * 100) };
+}
+
+if (typeof module !== 'undefined') {
+  module.exports = { cbSequence, cbIndex, CB_NORM, CB_MAX_LEN, spIndex, spMapping, spNextProbe, SP_NORM, dsSequence, dsExpected, dsNewRun, dsRecord, dsIndex, DS_NORMS, ageNorm, COMBOS, ALPHA, GAMMA, KAPPA, pCorrect, itemInfo, estimate, normCdf, chooseCombo, generateItem, makeRng, cellKey, hasCollision, N_ITEMS };
+}
+</script>
+
+<script>
+/* =====================================================================
+   DESENHO (SVG)
+   ===================================================================== */
+
+function shapeSVG(shape, cx, cy, r, color) {
+  const st = `fill="${color}" stroke="#1b1f2a" stroke-width="1.6"`;
+  switch (shape) {
+    case 'circle':
+      return `<circle cx="${cx}" cy="${cy}" r="${r}" ${st}/>`;
+    case 'square': {
+      const s = r * 1.75;
+      return `<rect x="${cx - s / 2}" y="${cy - s / 2}" width="${s}" height="${s}" ${st}/>`;
+    }
+    case 'triangle': {
+      const h = r * 1.15;
+      return `<polygon points="${cx},${cy - h} ${cx + h},${cy + h * 0.8} ${cx - h},${cy + h * 0.8}" ${st}/>`;
+    }
+    case 'diamond': {
+      const d = r * 1.25;
+      return `<polygon points="${cx},${cy - d} ${cx + d},${cy} ${cx},${cy + d} ${cx - d},${cy}" ${st}/>`;
+    }
+    case 'hexagon': {
+      const pts = [];
+      for (let i = 0; i < 6; i++) {
+        const ang = Math.PI / 3 * i;
+        pts.push(`${(cx + r * 1.05 * Math.cos(ang)).toFixed(1)},${(cy + r * 1.05 * Math.sin(ang)).toFixed(1)}`);
+      }
+      return `<polygon points="${pts.join(' ')}" ${st}/>`;
+    }
+    case 'cross': {
+      const a = r * 1.05, b = r * 0.38;
+      const p = [
+        [cx - b, cy - a], [cx + b, cy - a], [cx + b, cy - b], [cx + a, cy - b], [cx + a, cy + b], [cx + b, cy + b],
+        [cx + b, cy + a], [cx - b, cy + a], [cx - b, cy + b], [cx - a, cy + b], [cx - a, cy - b], [cx - b, cy - b]
+      ];
+      return `<polygon points="${p.map(q => q.join(',')).join(' ')}" ${st}/>`;
+    }
+  }
+  return '';
+}
+
+function cellInner(cell, ox, oy) {
+  return cell.map(e => {
+    const x = ox + SLOT_XY[e.pos % 3];
+    const y = oy + SLOT_XY[Math.floor(e.pos / 3)];
+    return shapeSVG(e.shape, x, y, SIZES[e.size], e.color);
+  }).join('');
+}
+
+function matrixSVG(item) {
+  let out = `<svg viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Matriz 3 por 3 com a última peça faltando">`;
+  for (let i = 0; i < 9; i++) {
+    const r = Math.floor(i / 3), c = i % 3;
+    const ox = c * 100, oy = r * 100;
+    out += `<rect x="${ox + 2}" y="${oy + 2}" width="96" height="96" rx="6" fill="#ffffff" stroke="#c9ccd6" stroke-width="1.5"/>`;
+    if (i < 8) out += cellInner(item.cells[i], ox, oy);
+    else out += `<text x="${ox + 50}" y="${oy + 62}" text-anchor="middle" font-size="36" font-weight="700" fill="#9aa1b2" font-family="system-ui, sans-serif">?</text>`;
+  }
+  return out + `</svg>`;
+}
+
+function optionSVG(cell) {
+  return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="96" height="96" rx="6" fill="#ffffff" stroke="#c9ccd6" stroke-width="1.5"/>${cellInner(cell, 0, 0)}</svg>`;
+}
+
+/* =====================================================================
+   ARMAZENAMENTO LOCAL (só no aparelho)
+   ===================================================================== */
+
+const STORE_KEY = 'gflab.history.v1';
+let memoryHistory = [];
+function loadHistory() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    return raw ? JSON.parse(raw) : memoryHistory;
+  } catch (e) { return memoryHistory; }
+}
+function saveHistory(list) {
+  memoryHistory = list;
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(list)); } catch (e) { /* armazenamento indisponível */ }
+  if (window.gfCloud) window.gfCloud.push();
+}
+
+/* =====================================================================
+   FLUXO DO APP
+   ===================================================================== */
+
+const $ = id => document.getElementById(id);
+const screens = ['s-home', 's-guide', 's-menu', 's-cintro', 's-corsi', 's-cresult', 's-sintro', 's-speed', 's-sresult', 's-dintro', 's-digit', 's-dresult', 's-intro', 's-test', 's-ready', 's-result', 's-history', 's-about'];
+
+/* Perfil: último resultado de cada etapa (salvo só no aparelho) */
+const PROFILE_KEY = 'gflab.profile.v1';
+let memoryProfile = {};
+function loadProfile() {
+  try {
+    const raw = localStorage.getItem(PROFILE_KEY);
+    return raw ? JSON.parse(raw) : memoryProfile;
+  } catch (e) { return memoryProfile; }
+}
+function saveProfile(p) {
+  memoryProfile = p;
+  try { localStorage.setItem(PROFILE_KEY, JSON.stringify(p)); } catch (e) { /* armazenamento indisponível */ }
+  if (window.gfCloud) window.gfCloud.push();
+}
+function renderMenu() {
+  const p = loadProfile();
+  $('m-gf').textContent = p.gf ? `Último: ${p.gf.iq}` : '';
+  $('m-gwm').textContent = p.ds ? `Último: ${p.ds.fwd.index} / ${p.ds.bwd.index}` : '';
+
+  // Perfil: resultados lado a lado na mesma escala (40–160, média 100 no centro)
+  const items = [];
+  if (p.gf) items.push({ name: '🧩 Raciocínio fluido (Gf)', v: p.gf.iq, c: 'var(--c1)' });
+  if (p.ds) {
+    items.push({ name: '🔢 Memória de curto prazo (dígitos, direta)', v: p.ds.fwd.index, c: 'var(--c2)' });
+    items.push({ name: '🔢 Memória de trabalho (dígitos, inversa)', v: p.ds.bwd.index, c: 'var(--c2)' });
+  }
+  if (p.cb) items.push({ name: '🟦 Memória visuoespacial (Corsi)', v: p.cb.index, c: 'var(--c3)' });
+  $('m-cb').textContent = p.cb ? `Último: ${p.cb.index}` : '';
+  if (p.gs) items.push({ name: '⚡ Velocidade de processamento (Gs)', v: p.gs.index, c: 'var(--c4)' });
+  $('m-gs').textContent = p.gs ? `Último: ${p.gs.index}` : '';
+  const box = $('m-profile');
+  if (!items.length) {
+    box.classList.add('hidden');
+  } else {
+    const bars = items.map(it => {
+      const w = Math.max(0, Math.min(100, ((it.v - 40) / 120) * 100));
+      return `<div class="pbar"><div class="lbl"><span>${it.name}</span><b>${it.v} · ${classify(it.v)}</b></div>
+        <div class="track"><div class="fill" style="width:${w}%;background:${it.c}"></div><div class="mid"></div></div></div>`;
+    }).join('');
+    box.innerHTML = `<h2>Seu perfil</h2>
+      <p class="muted small">Todos na mesma escala: a linha marca a média (100). Cada etapa é independente; o perfil mostra seus pontos mais fortes e mais fracos.</p>
+      ${bars}`;
+    box.classList.remove('hidden');
+  }
+  show('s-menu');
+}
+
+let guideReturn = 's-home';
+function openGuide(from) { guideReturn = from; show('s-guide'); }
+$('b-guide').addEventListener('click', () => openGuide('s-home'));
+$('b-menu-guide').addEventListener('click', () => openGuide('s-menu'));
+$('b-guide-back').addEventListener('click', () => { if (guideReturn === 's-menu') renderMenu(); else show('s-home'); });
+$('b-guide-about').addEventListener('click', () => show('s-about'));
+function show(id) {
+  screens.forEach(s => $(s).classList.toggle('hidden', s !== id));
+  window.scrollTo(0, 0);
+}
+
+const rng = makeRng((Date.now() ^ Math.floor(Math.random() * 1e9)) >>> 0);
+
+const state = {
+  mode: 'practice',     // 'practice' | 'test'
+  index: 0,
+  item: null,
+  shownAt: 0,
+  timerId: null,
+  answered: false,
+  log: [],               // respostas do teste
+  recent: [],
+  age: null
+};
+
+// Treino: itens fáceis e progressivos
+const PRACTICE = [
+  { ne: 1, nr: 1, beta: -2.2 },
+  { ne: 1, nr: 2, beta: -1.619 },
+  { ne: 2, nr: 2, beta: -1.011 }
+];
+
+function updateStart() {
+  const a = parseInt($('age').value, 10);
+  const ageOk = Number.isFinite(a) && a >= 10 && a <= 110;
+  $('b-start').disabled = !($('agree').checked && ageOk);
+}
+$('agree').addEventListener('change', updateStart);
+$('age').addEventListener('input', updateStart);
+
+$('b-start').addEventListener('click', () => {
+  const a = parseInt($('age').value, 10);
+  state.age = Number.isFinite(a) ? a : null;
+  renderMenu();
+});
+$('m-go-gf').addEventListener('click', () => show('s-intro'));
+$('m-go-ds').addEventListener('click', () => startDigitPart('fwd'));
+$('b-menu-home').addEventListener('click', () => show('s-home'));
+$('b-dback').addEventListener('click', renderMenu);
+$('b-practice').addEventListener('click', () => {
+  state.mode = 'practice';
+  state.index = 0;
+  show('s-test');
+  nextItem();
+});
+$('b-real').addEventListener('click', () => {
+  state.mode = 'test';
+  state.index = 0;
+  state.log = [];
+  state.recent = [];
+  show('s-test');
+  nextItem();
+});
+$('b-next').addEventListener('click', () => {
+  state.index++;
+  if (state.index >= PRACTICE.length) { show('s-ready'); return; }
+  nextItem();
+});
+$('b-history').addEventListener('click', renderHistory);
+$('b-about').addEventListener('click', () => show('s-about'));
+$('b-back1').addEventListener('click', () => show('s-home'));
+$('b-back2').addEventListener('click', () => show('s-home'));
+$('b-again').addEventListener('click', renderMenu);
+$('b-clear').addEventListener('click', () => { saveHistory([]); renderHistory(); });
+
+function currentTheta() {
+  const valid = state.log.filter(r => !r.rapid);
+  return estimate(valid).theta;
+}
+
+function nextItem() {
+  clearInterval(state.timerId);
+  state.answered = false;
+  $('t-feedback').classList.add('hidden');
+  $('b-next').classList.add('hidden');
+  $('t-timer').textContent = '';
+
+  let combo;
+  if (state.mode === 'practice') {
+    combo = PRACTICE[state.index];
+    $('t-label').textContent = `Treino ${state.index + 1} de ${PRACTICE.length}`;
+    $('t-bar').style.width = `${(state.index / PRACTICE.length) * 100}%`;
+  } else {
+    combo = chooseCombo(currentTheta(), state.recent, rng);
+    state.recent.push(combo);
+    $('t-label').textContent = `Item ${state.index + 1} de ${N_ITEMS}`;
+    $('t-bar').style.width = `${(state.index / N_ITEMS) * 100}%`;
+  }
+  state.item = generateItem(combo, rng);
+
+  // Ponto de fixação (1,2 s), como no protocolo do MaRs-IB
+  $('t-stage').classList.add('hidden');
+  $('t-fix').classList.remove('hidden');
+  setTimeout(() => {
+    $('t-fix').classList.add('hidden');
+    $('t-stage').classList.remove('hidden');
+    renderItem();
+  }, 1200);
+}
+
+function renderItem() {
+  const it = state.item;
+  $('t-matrix').innerHTML = matrixSVG(it);
+  const box = $('t-opts');
+  box.innerHTML = '';
+  it.options.forEach((o, i) => {
+    const b = document.createElement('button');
+    b.className = 'opt';
+    b.setAttribute('aria-label', `Opção ${i + 1}`);
+    b.innerHTML = optionSVG(o.cell);
+    b.addEventListener('click', () => answer(i));
+    box.appendChild(b);
+  });
+  state.shownAt = performance.now();
+  if (state.mode === 'test') {
+    state.timerId = setInterval(tick, 200);
+  }
+}
+
+function tick() {
+  const el = (performance.now() - state.shownAt) / 1000;
+  const left = Math.max(0, TIME_LIMIT - el);
+  // Como no MaRs-IB: o relógio aparece nos 5 segundos finais
+  $('t-timer').textContent = left <= 5 ? `${Math.ceil(left)}s` : '';
+  if (left <= 0) answer(-1);
+}
+
+function answer(choice) {
+  if (state.answered) return;
+  state.answered = true;
+  clearInterval(state.timerId);
+  const rt = (performance.now() - state.shownAt) / 1000;
+  const it = state.item;
+  const correct = choice === it.answerIndex;
+
+  if (state.mode === 'practice') {
+    const btns = $('t-opts').children;
+    btns[it.answerIndex].classList.add('right');
+    if (!correct && choice >= 0) btns[choice].classList.add('wrong');
+    const fb = $('t-feedback');
+    fb.innerHTML = correct
+      ? '<b>Correto!</b> Você identificou as regras.'
+      : '<b>Não foi dessa vez.</b> A resposta certa está destacada em verde. Compare linha por linha: o que se repete e o que muda?';
+    fb.classList.remove('hidden');
+    $('b-next').textContent = state.index + 1 >= PRACTICE.length ? 'Concluir treino' : 'Próxima';
+    $('b-next').classList.remove('hidden');
+    return;
+  }
+
+  state.log.push({
+    ne: it.combo.ne, nr: it.combo.nr, beta: it.beta,
+    correct, rt: +rt.toFixed(2), timeout: choice === -1,
+    rapid: choice !== -1 && rt < RAPID_GUESS
+  });
+  state.index++;
+  if (state.index >= N_ITEMS) finish();
+  else nextItem();
+}
+
+function classify(iq) {
+  if (iq >= 130) return 'Muito acima da média';
+  if (iq >= 120) return 'Acima da média';
+  if (iq >= 110) return 'Média superior';
+  if (iq >= 90) return 'Média';
+  if (iq >= 80) return 'Média inferior';
+  if (iq >= 70) return 'Abaixo da média';
+  return 'Muito abaixo da média';
+}
+
+function bellSVG(iq, lo, hi) {
+  const W = 320, H = 110, base = 92;
+  const x = v => ((v - 40) / 120) * W;
+  let d = '';
+  for (let v = 40; v <= 160; v += 1) {
+    const z = (v - 100) / 15;
+    const y = base - Math.exp(-0.5 * z * z) * 78;
+    d += (v === 40 ? 'M' : 'L') + x(v).toFixed(1) + ',' + y.toFixed(1);
+  }
+  const ticks = [55, 70, 85, 100, 115, 130, 145].map(v =>
+    `<line x1="${x(v)}" y1="${base}" x2="${x(v)}" y2="${base + 4}" stroke="#9aa1b2"/><text x="${x(v)}" y="${base + 16}" font-size="10" fill="#5d6474" text-anchor="middle">${v}</text>`
+  ).join('');
+  return `<svg class="bell" viewBox="0 0 ${W} ${H + 12}" xmlns="http://www.w3.org/2000/svg">
+    <rect x="${x(lo)}" y="8" width="${Math.max(2, x(hi) - x(lo))}" height="${base - 8}" fill="#0f7b5f" opacity="0.14"/>
+    <path d="${d}" fill="none" stroke="#5d6474" stroke-width="2"/>
+    <line x1="${x(iq)}" y1="8" x2="${x(iq)}" y2="${base}" stroke="#0f7b5f" stroke-width="3"/>
+    <line x1="0" y1="${base}" x2="${W}" y2="${base}" stroke="#9aa1b2"/>
+    ${ticks}
+  </svg>`;
+}
+
+function finish() {
+  $('t-bar').style.width = '100%';
+  const valid = state.log.filter(r => !r.rapid);
+  const est = estimate(valid);
+  const clamp = v => Math.max(40, Math.min(160, v));
+  // Escore principal: comparação com pessoas da mesma idade (QI de desvio)
+  const norm = ageNorm(state.age);
+  const z = (est.theta - norm.mu) / norm.sd;
+  const zse = est.se / norm.sd;
+  const iq = Math.round(clamp(100 + 15 * z));
+  const lo = Math.round(clamp(100 + 15 * (z - 1.96 * zse)));
+  const hi = Math.round(clamp(100 + 15 * (z + 1.96 * zse)));
+  const pct = Math.round(normCdf(z) * 100);
+  // Escore secundário: comparação com todos os adultos da amostra
+  const iqAll = Math.round(clamp(100 + 15 * est.theta));
+  const pctAll = Math.round(normCdf(est.theta) * 100);
+  const totalTime = state.log.reduce((a, r) => a + r.rt, 0);
+  const correctRts = state.log.filter(r => r.correct).map(r => r.rt).sort((a, b) => a - b);
+  const medianCorrectRt = correctRts.length ? correctRts[Math.floor(correctRts.length / 2)] : null;
+  const nCorrect = state.log.filter(r => r.correct).length;
+  const nRapid = state.log.filter(r => r.rapid).length;
+  const nTimeout = state.log.filter(r => r.timeout).length;
+  const reliability = Math.max(0, 1 - est.se * est.se);
+
+  $('r-main').innerHTML = `
+    <p class="muted">QI estimado (raciocínio fluido)</p>
+    <div class="big">${iq}</div>
+    <p class="range">Faixa provável (95%): ${lo} a ${hi}</p>
+    <p>${classify(iq)} · percentil ≈ ${pct}<br><span class="muted small">Comparado a pessoas de ${Math.max(AGE_MIN, Math.min(AGE_MAX, state.age))} anos: desempenho igual ou superior a cerca de ${pct}% delas.</span></p>
+    ${bellSVG(iq, lo, hi)}
+    <div class="row" style="margin-top:8px"><span>Comparado a adultos de todas as idades (18–74)</span><span>${iqAll} · percentil ≈ ${pctAll}</span></div>
+  `;
+
+  // Tabela de interpretação: faixas clássicas da escala de QI (média 100, desvio-padrão 15)
+  const bands = [
+    { min: 130, max: 999, label: 'Muito acima da média', pop: '≈ 2%' },
+    { min: 120, max: 129, label: 'Acima da média', pop: '≈ 7%' },
+    { min: 110, max: 119, label: 'Média superior', pop: '≈ 16%' },
+    { min: 90, max: 109, label: 'Média', pop: '≈ 50%' },
+    { min: 80, max: 89, label: 'Média inferior', pop: '≈ 16%' },
+    { min: 70, max: 79, label: 'Abaixo da média', pop: '≈ 7%' },
+    { min: 0, max: 69, label: 'Muito abaixo da média', pop: '≈ 2%' }
+  ];
+  const bandRows = bands.map(b => {
+    const mine = iq >= b.min && iq <= b.max;
+    const range = b.min === 130 ? '130 ou mais' : b.min === 0 ? '69 ou menos' : `${b.min}–${b.max}`;
+    return `<div class="row band${mine ? ' mine' : ''}"><span>${range}</span><span>${b.label}</span><span class="muted">${b.pop}</span></div>`;
+  }).join('');
+  $('r-scale').innerHTML = `
+    <h2>Como ler seu resultado</h2>
+    <p>A escala de QI é construída para que a <b>média seja 100</b>. Cerca de metade das pessoas fica entre 90 e 109, e dois terços ficam entre 85 e 115.</p>
+    <div class="row band head"><span>Pontuação</span><span>Classificação</span><span>Pessoas</span></div>
+    ${bandRows}
+    <p class="muted small" style="margin-top:10px">A linha destacada é a sua. "Pessoas" indica a porcentagem aproximada da população em cada faixa.</p>
+    <h3>Dados de referência do estudo original</h3>
+    <div class="row"><span>Acerto médio dos adultos no MaRs-IB</span><span>61% das matrizes</span></div>
+    <div class="row"><span>Tempo típico por matriz (mediana)</span><span>15 s</span></div>
+    <div class="row"><span>Metade dos adultos leva, por matriz</span><span>entre 12 e 19 s</span></div>
+    <div class="row"><span>Seu tempo médio por matriz</span><span>${(state.log.reduce((a, r) => a + r.rt, 0) / state.log.length).toFixed(1)} s</span></div>
+    <p class="muted small" style="margin-top:10px">Dados da calibração do MaRs-IB (1.501 adultos; Zorowitz et al., 2024), em que todos receberam matrizes de dificuldade variada. Como este teste é adaptativo, a sua taxa de acerto tende a ficar perto de 50 a 60%, qualquer que seja o seu nível: é a dificuldade das questões que você alcançou que define a pontuação.</p>
+  `;
+
+  const groups = [
+    { name: 'Matrizes simples (1–2 regras)', f: r => r.nr <= 2 },
+    { name: 'Matrizes médias (3–4 regras)', f: r => r.nr >= 3 && r.nr <= 4 },
+    { name: 'Matrizes complexas (5–6 regras)', f: r => r.nr >= 5 }
+  ];
+  const rows = groups.map(g => {
+    const it = state.log.filter(g.f);
+    if (!it.length) return `<div class="row"><span>${g.name}</span><span class="muted">não apresentadas</span></div>`;
+    const c = it.filter(r => r.correct).length;
+    return `<div class="row"><span>${g.name}</span><span>${c} de ${it.length}</span></div>`;
+  }).join('');
+  const meanRt = (state.log.reduce((a, r) => a + r.rt, 0) / state.log.length).toFixed(1);
+
+  $('r-detail').innerHTML = `
+    <h2>Detalhes</h2>
+    <div class="row"><span>Acertos</span><span>${nCorrect} de ${N_ITEMS}</span></div>
+    ${rows}
+    <h3>Tempo (informativo, não entra na pontuação)</h3>
+    <div class="row"><span>Tempo total de resposta</span><span>${Math.floor(totalTime / 60)} min ${Math.round(totalTime % 60)} s</span></div>
+    <div class="row"><span>Tempo médio por item</span><span>${meanRt}s</span></div>
+    <div class="row"><span>Tempo típico nos acertos (mediana)</span><span>${medianCorrectRt !== null ? medianCorrectRt.toFixed(1) + 's' : '—'}</span></div>
+    <div class="row"><span>Tempo esgotado</span><span>${nTimeout}</span></div>
+    <h3>Qualidade da medida</h3>
+    <div class="row"><span>Respostas descartadas (&lt; 3s)</span><span>${nRapid}</span></div>
+    <div class="row"><span>Precisão da medida (confiabilidade)</span><span>${reliability.toFixed(2)}</span></div>
+    <div class="row"><span>θ (escala TRI)</span><span>${est.theta.toFixed(2)} ± ${est.se.toFixed(2)}</span></div>
+    <p class="muted small" style="margin-top:10px">Num teste adaptativo, o número de acertos não equivale à pontuação: quem acerta mais recebe itens mais difíceis.</p>
+  `;
+
+  const warns = [];
+  warns.push('<b>Régua de comparação:</b> adultos dos EUA da amostra de calibração do MaRs-IB, com escolaridade acima da média. Não há normas brasileiras.');
+  warns.push('Estimativa de autoconhecimento, sem validade clínica. Mede só o raciocínio fluido, não o QI completo.');
+  if (state.age < AGE_MIN || state.age > AGE_MAX) {
+    warns.push(`<b>Atenção:</b> sua idade (${state.age}) está fora da faixa da amostra de referência (18 a 74 anos). A comparação usou a faixa mais próxima (${state.age < AGE_MIN ? AGE_MIN : AGE_MAX} anos). Interprete com mais cautela.`);
+  }
+  if (nRapid >= 5) {
+    warns.push(`<b>Atenção:</b> ${nRapid} respostas foram muito rápidas e descartadas. O resultado pode não refletir seu desempenho real.`);
+  }
+  const hist = loadHistory();
+  if (hist.length > 0) {
+    warns.push('Este não é seu primeiro teste. Repetições tendem a inflar a pontuação por efeito de prática.');
+  }
+  $('r-warn').innerHTML = warns.join('<br><br>');
+
+  hist.push({ date: new Date().toISOString(), age: state.age, iq, lo, hi, pct, iqAll, theta: +est.theta.toFixed(3), se: +est.se.toFixed(3), correct: nCorrect, attempt: hist.length + 1 });
+  saveHistory(hist);
+  const prof = loadProfile();
+  prof.gf = { date: new Date().toISOString(), iq, lo, hi, pct, z: +z.toFixed(3) };
+  saveProfile(prof);
+  show('s-result');
+}
+
+function renderHistory() {
+  const hist = loadHistory();
+  const box = $('h-list');
+  if (!hist.length) {
+    box.innerHTML = '<p class="muted">Nenhum resultado salvo ainda.</p>';
+  } else {
+    box.innerHTML = hist.slice().reverse().map(h => {
+      const d = new Date(h.date);
+      const ds = d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      return `<div class="row"><span>${ds}<br><span class="muted small">Tentativa ${h.attempt}</span></span><span><b>${h.iq}</b> <span class="muted small">(${h.lo}–${h.hi})</span></span></div>`;
+    }).join('');
+  }
+  show('s-history');
+}
+
+/* =====================================================================
+   ETAPA 2: FLUXO DA TAREFA DE DÍGITOS
+   ===================================================================== */
+
+const ds = {
+  mode: 'fwd',          // 'fwd' (ordem direta) | 'bwd' (ordem inversa)
+  phase: 'practice',    // 'practice' | 'test'
+  practiceIdx: 0,
+  seq: [],
+  input: [],
+  run: null,
+  results: {},
+  accepting: false
+};
+const DS_PRACTICE_LENS = [2, 3];
+
+function startDigitPart(mode) {
+  ds.mode = mode;
+  ds.phase = 'practice';
+  ds.practiceIdx = 0;
+  ds.run = dsNewRun();
+  if (mode === 'fwd') ds.results = {};
+  $('d-intro-tag').textContent = `Etapa 2 · Parte ${mode === 'fwd' ? 1 : 2} de 2`;
+  $('d-intro-title').textContent = mode === 'fwd' ? 'Ordem direta' : 'Ordem inversa';
+  $('d-intro-measure').textContent = mode === 'fwd'
+    ? 'Memória de curto prazo: quanta informação você consegue guardar.'
+    : 'Memória de trabalho: guardar a informação e manipulá-la ao mesmo tempo.';
+  $('d-intro-text').innerHTML = mode === 'fwd'
+    ? 'Memorize os números e digite-os <b>na mesma ordem</b> em que apareceram. Exemplo: se aparecer 3 → 8 → 1, digite <b>3 8 1</b>.'
+    : 'Agora digite os números <b>de trás para frente</b>. Exemplo: se aparecer 3 → 8 → 1, digite <b>1 8 3</b>.';
+  show('s-dintro');
+}
+
+$('b-dstart').addEventListener('click', () => {
+  show('s-digit');
+  dsNextTrial();
+});
+
+$('b-dnext').addEventListener('click', () => {
+  $('b-dnext').classList.add('hidden');
+  $('d-feedback').classList.add('hidden');
+  dsNextTrial();
+});
+
+function dsBuildKeypad() {
+  const kp = $('d-keypad');
+  kp.innerHTML = '';
+  const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'];
+  keys.forEach(k => {
+    const b = document.createElement('button');
+    b.textContent = k;
+    if (k === '') b.className = 'blank';
+    else if (k === '⌫') b.setAttribute('aria-label', 'Apagar');
+    b.addEventListener('click', () => dsKey(k));
+    kp.appendChild(b);
+  });
+}
+dsBuildKeypad();
+
+document.addEventListener('keydown', e => {
+  if ($('s-digit').classList.contains('hidden') || !ds.accepting) return;
+  if (/^[0-9]$/.test(e.key)) dsKey(e.key);
+  else if (e.key === 'Backspace') dsKey('⌫');
+});
+
+function dsRenderSlots() {
+  const box = $('d-slots');
+  box.innerHTML = '';
+  for (let i = 0; i < ds.seq.length; i++) {
+    const s = document.createElement('span');
+    if (i < ds.input.length) { s.textContent = ds.input[i]; s.classList.add('filled'); }
+    box.appendChild(s);
+  }
+}
+
+function dsNextTrial() {
+  let len;
+  if (ds.phase === 'practice') {
+    len = DS_PRACTICE_LENS[ds.practiceIdx];
+    $('d-label').textContent = `Treino ${ds.practiceIdx + 1} de 2`;
+  } else {
+    len = ds.run.len;
+    $('d-label').textContent = ds.mode === 'fwd' ? 'Ordem direta' : 'Ordem inversa';
+  }
+  $('d-len').textContent = `${len} números · tentativa ${ds.phase === 'practice' ? 1 : ds.run.trial + 1} de ${ds.phase === 'practice' ? 1 : 2}`;
+  ds.seq = dsSequence(len, rng);
+  ds.input = [];
+  ds.accepting = false;
+  $('d-answer').classList.add('hidden');
+  $('d-show').classList.remove('hidden');
+  $('d-show').textContent = '';
+
+  // Apresentação: cada dígito por 1 s, com um breve intervalo em branco entre eles
+  let i = 0;
+  const step = () => {
+    if (i >= ds.seq.length) {
+      $('d-show').textContent = '';
+      setTimeout(dsAskAnswer, 300);
+      return;
+    }
+    $('d-show').textContent = ds.seq[i];
+    setTimeout(() => {
+      $('d-show').textContent = '';
+      i++;
+      setTimeout(step, 150);
+    }, DS_DIGIT_MS);
+  };
+  setTimeout(step, 700);
+}
+
+function dsAskAnswer() {
+  $('d-show').classList.add('hidden');
+  $('d-prompt').textContent = ds.mode === 'fwd' ? 'Digite na MESMA ordem' : 'Digite de TRÁS PARA FRENTE';
+  dsRenderSlots();
+  $('d-answer').classList.remove('hidden');
+  ds.accepting = true;
+}
+
+function dsKey(k) {
+  if (!ds.accepting) return;
+  if (k === '⌫') { ds.input.pop(); dsRenderSlots(); return; }
+  if (k === '') return;
+  ds.input.push(parseInt(k, 10));
+  dsRenderSlots();
+  if (ds.input.length === ds.seq.length) {
+    ds.accepting = false;
+    setTimeout(dsSubmit, 250);
+  }
+}
+
+function dsSubmit() {
+  const expected = dsExpected(ds.seq, ds.mode);
+  const correct = expected.every((d, i) => d === ds.input[i]);
+
+  if (ds.phase === 'practice') {
+    const fb = $('d-feedback');
+    if (correct) {
+      fb.innerHTML = '<b>Correto!</b>';
+      ds.practiceIdx++;
+    } else {
+      fb.innerHTML = `<b>Não foi dessa vez.</b> A resposta certa era <b>${expected.join(' ')}</b>. Vamos repetir este treino.`;
+    }
+    if (ds.practiceIdx >= DS_PRACTICE_LENS.length) {
+      ds.phase = 'test';
+      fb.innerHTML += '<br>Treino concluído. Agora começa para valer, sem correção.';
+    }
+    fb.classList.remove('hidden');
+    $('d-answer').classList.add('hidden');
+    $('b-dnext').classList.remove('hidden');
+    return;
+  }
+
+  dsRecord(ds.run, correct);
+  if (!ds.run.done) { dsNextTrial(); return; }
+
+  ds.results[ds.mode] = { span: ds.run.span, numCorrect: ds.run.numCorrect };
+  if (ds.mode === 'fwd') startDigitPart('bwd');
+  else dsFinish();
+}
+
+function dsFinish() {
+  const f = ds.results.fwd, b = ds.results.bwd;
+  const fi = dsIndex(f.span, 'fwd');
+  const bi = dsIndex(b.span, 'bwd');
+
+  const block = (title, sub, r, ix, norm) => `
+    <div style="margin-bottom:18px">
+      <p class="muted" style="margin-bottom:2px">${title}</p>
+      <p class="muted small">${sub}</p>
+      <div class="big">${r.span} <span style="font-size:1.1rem;font-weight:600;color:var(--muted)">dígitos</span></div>
+      <p class="range">Índice ${ix.index} · ${classify(ix.index)}</p>
+      <p class="muted small">A média de referência é ${norm.mean.toString().replace('.', ',')} dígitos. Seu resultado é igual ou superior ao de cerca de ${ix.pct}% das pessoas.</p>
+    </div>`;
+
+  $('dr-main').innerHTML =
+    block('Ordem direta', 'Memória de curto prazo: guardar a informação', f, fi, DS_NORMS.fwd) +
+    block('Ordem inversa', 'Memória de trabalho: guardar e manipular a informação', b, bi, DS_NORMS.bwd);
+
+  $('dr-detail').innerHTML = `
+    <h2>Como ler</h2>
+    <p>O <b>span</b> é a maior sequência que você conseguiu lembrar corretamente (ao menos 1 das 2 tentativas). O índice usa a mesma escala do QI: média 100, desvio-padrão 15.</p>
+    <div class="row"><span>Sequências corretas (direta)</span><span>${f.numCorrect}</span></div>
+    <div class="row"><span>Sequências corretas (inversa)</span><span>${b.numCorrect}</span></div>
+    <div class="row"><span>Diferença direta − inversa</span><span>${f.span - b.span} dígito(s)</span></div>
+    <p class="muted small" style="margin-top:10px">É esperado lembrar cerca de 1 dígito a menos na ordem inversa (diferença média de referência: 1,1). Cada dígito a mais ou a menos equivale a cerca de 9 pontos no índice, então pequenas variações entre tentativas são normais.</p>
+  `;
+
+  $('dr-warn').innerHTML = [
+    '<b>Régua de comparação:</b> amostra do TestMyBrain (Singh et al., 2021), com ' + DS_NORMS.fwd.n.toLocaleString('pt-BR') + ' pessoas na ordem direta e ' + DS_NORMS.bwd.n.toLocaleString('pt-BR') + ' na inversa, aplicada online com o mesmo procedimento. A amostra é majoritariamente jovem (idade média de 28,8 anos).',
+    'Não há ajuste por idade nesta etapa. No estudo brasileiro de Zimmermann et al. (2015), o efeito da idade em adultos apareceu só em medidas de velocidade (Stroop), e não no teste de dígitos. A escolaridade, por outro lado, influenciou a maioria das medidas.',
+    'Estimativa de autoconhecimento, sem validade clínica.'
+  ].join('<br><br>');
+
+  const prof = loadProfile();
+  prof.ds = {
+    date: new Date().toISOString(),
+    fwd: { span: f.span, index: fi.index, z: +fi.z.toFixed(3) },
+    bwd: { span: b.span, index: bi.index, z: +bi.z.toFixed(3) }
+  };
+  saveProfile(prof);
+  show('s-dresult');
+}
+
+/* =====================================================================
+   ETAPA 3: FLUXO DOS BLOCOS DE CORSI
+   ===================================================================== */
+
+const cb = {
+  phase: 'practice',   // 'practice' | 'test'
+  practiceIdx: 0,
+  seq: [],
+  input: [],
+  run: null,
+  accepting: false
+};
+const CB_PRACTICE_LENS = [2, 3];
+
+function cbBuildBoard() {
+  let svg = `<svg viewBox="0 0 300 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Tabuleiro com 9 blocos">`;
+  CB_BLOCKS.forEach((b, i) => {
+    svg += `<rect class="blk" data-i="${i}" x="${b.x}" y="${b.y}" width="${CB_SIZE}" height="${CB_SIZE}" rx="6"/>`;
+  });
+  svg += `</svg>`;
+  $('c-board').innerHTML = svg;
+  $('c-board').querySelectorAll('rect.blk').forEach(r => {
+    r.addEventListener('pointerdown', e => { e.preventDefault(); cbTap(parseInt(r.dataset.i, 10)); });
+  });
+}
+
+function cbBlock(i) { return $('c-board').querySelector(`rect[data-i="${i}"]`); }
+
+$('m-go-cb').addEventListener('click', () => show('s-cintro'));
+$('b-cback').addEventListener('click', renderMenu);
+$('b-cstart').addEventListener('click', () => {
+  cb.phase = 'practice';
+  cb.practiceIdx = 0;
+  cb.run = dsNewRun();
+  cbBuildBoard();
+  $('c-feedback').classList.add('hidden');
+  $('b-cnext').classList.add('hidden');
+  show('s-corsi');
+  cbNextTrial();
+});
+$('b-cnext').addEventListener('click', () => {
+  $('b-cnext').classList.add('hidden');
+  $('c-feedback').classList.add('hidden');
+  cbNextTrial();
+});
+
+function cbNextTrial() {
+  let len;
+  if (cb.phase === 'practice') {
+    len = CB_PRACTICE_LENS[cb.practiceIdx];
+    $('c-label').textContent = `Treino ${cb.practiceIdx + 1} de 2`;
+    $('c-len').textContent = `${len} blocos`;
+  } else {
+    len = cb.run.len;
+    $('c-label').textContent = 'Teste';
+    $('c-len').textContent = `${len} blocos · tentativa ${cb.run.trial + 1} de 2`;
+  }
+  cb.seq = cbSequence(len, rng);
+  cb.input = [];
+  cb.accepting = false;
+  $('c-prompt').textContent = 'Observe…';
+
+  let i = 0;
+  const step = () => {
+    if (i >= cb.seq.length) {
+      $('c-prompt').textContent = 'Sua vez: toque os blocos na mesma ordem';
+      cb.accepting = true;
+      return;
+    }
+    const el = cbBlock(cb.seq[i]);
+    el.classList.add('on');
+    setTimeout(() => {
+      el.classList.remove('on');
+      i++;
+      setTimeout(step, CB_OFF_MS);
+    }, CB_ON_MS);
+  };
+  setTimeout(step, 900);
+}
+
+function cbTap(i) {
+  if (!cb.accepting) return;
+  const el = cbBlock(i);
+  el.classList.add('tap');
+  setTimeout(() => el.classList.remove('tap'), 200);
+  cb.input.push(i);
+  if (cb.input.length === cb.seq.length) {
+    cb.accepting = false;
+    setTimeout(cbSubmit, 300);
+  }
+}
+
+function cbSubmit() {
+  const correct = cb.seq.every((b, k) => b === cb.input[k]);
+
+  if (cb.phase === 'practice') {
+    const fb = $('c-feedback');
+    if (correct) {
+      fb.innerHTML = '<b>Correto!</b>';
+      cb.practiceIdx++;
+    } else {
+      fb.innerHTML = '<b>Não foi dessa vez.</b> Vamos repetir este treino com uma nova sequência.';
+    }
+    if (cb.practiceIdx >= CB_PRACTICE_LENS.length) {
+      cb.phase = 'test';
+      fb.innerHTML += '<br>Treino concluído. Agora começa para valer, sem correção.';
+    }
+    $('c-prompt').textContent = '';
+    fb.classList.remove('hidden');
+    $('b-cnext').classList.remove('hidden');
+    return;
+  }
+
+  dsRecord(cb.run, correct, CB_MAX_LEN);
+  if (!cb.run.done) { cbNextTrial(); return; }
+  cbFinish();
+}
+
+function cbFinish() {
+  const span = cb.run.span;
+  const total = cb.run.numCorrect;
+  const ix = cbIndex(span);
+  $('cr-main').innerHTML = `
+    <p class="muted">Span visuoespacial (ordem direta)</p>
+    <div class="big">${span} <span style="font-size:1.1rem;font-weight:600;color:var(--muted)">blocos</span></div>
+    <p class="range">Índice ${ix.index} · ${classify(ix.index)}</p>
+    <p class="muted small">A média de referência é 6,2 blocos. Seu resultado é igual ou superior ao de cerca de ${ix.pct}% das pessoas.</p>
+    ${bellSVG(ix.index, ix.index, ix.index)}
+  `;
+  $('cr-detail').innerHTML = `
+    <h2>Detalhes</h2>
+    <div class="row"><span>Sequências corretas</span><span>${total}</span></div>
+    <div class="row"><span>Escore total (corretas × span)</span><span>${total * span}</span></div>
+    <p class="muted small" style="margin-top:10px">O span é a maior sequência repetida corretamente (ao menos 1 das 2 tentativas). O escore total é uma medida complementar proposta por Kessels et al. (2000). Cada bloco a mais ou a menos equivale a cerca de 17 pontos no índice.</p>
+  `;
+  $('cr-warn').innerHTML = [
+    '<b>Régua de comparação:</b> padronização de Kessels et al. (2000), com 70 adultos saudáveis de 18 a 72 anos (Holanda), usando o tabuleiro físico. A amostra é pequena e a versão digital pode diferir um pouco da física, então trate este resultado como o mais aproximado da bateria.',
+    'Existe uma norma brasileira (Gomes de Santana et al., 2021, Bahia), mas os valores não estão acessíveis em formato utilizável. Ela pode substituir esta referência numa versão futura.',
+    'Estimativa de autoconhecimento, sem validade clínica.'
+  ].join('<br><br>');
+
+  const prof = loadProfile();
+  prof.cb = { date: new Date().toISOString(), span, total, index: ix.index, z: +ix.z.toFixed(3) };
+  saveProfile(prof);
+  show('s-cresult');
+}
+
+/* =====================================================================
+   ETAPA 4: FLUXO DA TAREFA DE VELOCIDADE
+   ===================================================================== */
+
+const sp = {
+  phase: 'practice',  // 'practice' | 'test' | 'done'
+  map: [],
+  probe: -1,
+  shownAt: 0,
+  practiceDone: 0,
+  practiceTimer: null,
+  testStart: 0,
+  testTimer: null,
+  log: []
+};
+
+function glyphSVG(g, size) {
+  return `<svg viewBox="0 0 40 40" width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg"><path d="${SP_GLYPHS[g]}" fill="none" stroke="#14161c" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+
+function spDigitOf(g) { return sp.map.find(m => m.glyph === g).digit; }
+
+function spRenderLegend() {
+  // Ordenada por dígito, como a chave do subteste Código
+  const sorted = sp.map.slice().sort((a, b) => a.digit - b.digit);
+  $('sp-legend').innerHTML = sorted.map(m => `<div>${glyphSVG(m.glyph, 40)}<b>${m.digit}</b></div>`).join('');
+}
+
+function spBuildButtons() {
+  const box = $('sp-buttons');
+  box.innerHTML = '';
+  [1, 2, 3].forEach(d => {
+    const b = document.createElement('button');
+    b.textContent = d;
+    b.addEventListener('pointerdown', e => { e.preventDefault(); spAnswer(d, b); });
+    box.appendChild(b);
+  });
+}
+spBuildButtons();
+
+document.addEventListener('keydown', e => {
+  if ($('s-speed').classList.contains('hidden')) return;
+  if (e.key === '1' || e.key === '2' || e.key === '3') {
+    const d = parseInt(e.key, 10);
+    spAnswer(d, $('sp-buttons').children[d - 1]);
+  }
+});
+
+$('m-go-gs').addEventListener('click', () => show('s-sintro'));
+$('b-sback').addEventListener('click', renderMenu);
+$('b-sstart').addEventListener('click', () => {
+  sp.phase = 'practice';
+  sp.practiceDone = 0;
+  sp.log = [];
+  sp.map = spMapping(rng);
+  sp.probe = -1;
+  spRenderLegend();
+  $('sp-label').textContent = 'Treino 1 de 3';
+  $('sp-timer').textContent = '';
+  $('sp-bar').style.width = '0%';
+  $('sp-feedback').classList.add('hidden');
+  $('b-snext').classList.add('hidden');
+  $('sp-buttons').classList.remove('hidden');
+  show('s-speed');
+  spShowProbe(spNextProbe(sp.probe, rng));
+});
+$('b-snext').addEventListener('click', spStartTest);
+
+function spShowProbe(g) {
+  sp.probe = g;
+  $('sp-probe').innerHTML = glyphSVG(g, 110);
+  sp.shownAt = performance.now();
+  if (sp.phase === 'practice') {
+    clearTimeout(sp.practiceTimer);
+    sp.practiceTimer = setTimeout(() => spPracticeMiss('Tempo esgotado.'), SP_PRACTICE_LIMIT * 1000);
+  }
+}
+
+function spPracticeMiss(msg) {
+  clearTimeout(sp.practiceTimer);
+  const fb = $('sp-feedback');
+  fb.innerHTML = `<b>${msg}</b> Este símbolo corresponde ao número <b>${spDigitOf(sp.probe)}</b>. Vamos repetir.`;
+  fb.classList.remove('hidden');
+  // Repete o mesmo símbolo após a correção
+  setTimeout(() => { fb.classList.add('hidden'); spShowProbe(sp.probe); }, 2200);
+  sp.locked = true;
+  setTimeout(() => { sp.locked = false; }, 2200);
+}
+
+function spAnswer(d, btn) {
+  if (sp.locked || sp.phase === 'done' || sp.probe < 0) return;
+  const rt = performance.now() - sp.shownAt;
+  const correct = d === spDigitOf(sp.probe);
+
+  if (sp.phase === 'practice') {
+    if (!correct) { spPracticeMiss('Não é esse.'); return; }
+    clearTimeout(sp.practiceTimer);
+    sp.practiceDone++;
+    if (sp.practiceDone >= SP_PRACTICE) {
+      sp.probe = -1;
+      $('sp-probe').innerHTML = '';
+      const fb = $('sp-feedback');
+      fb.innerHTML = '<b>Treino concluído!</b> No teste não há correção. Quando tocar no botão, você terá 90 segundos para fazer o máximo de acertos.';
+      fb.classList.remove('hidden');
+      $('sp-buttons').classList.add('hidden');
+      $('b-snext').classList.remove('hidden');
+      return;
+    }
+    $('sp-label').textContent = `Treino ${sp.practiceDone + 1} de 3`;
+    spShowProbe(spNextProbe(sp.probe, rng));
+    return;
+  }
+
+  // Teste: sem correção; o botão tocado fica vermelho por 300 ms (como no original)
+  sp.log.push({ correct, rt });
+  btn.classList.add('hit');
+  setTimeout(() => btn.classList.remove('hit'), 300);
+  spShowProbe(spNextProbe(sp.probe, rng));
+}
+
+function spStartTest() {
+  $('b-snext').classList.add('hidden');
+  $('sp-feedback').classList.add('hidden');
+  $('sp-buttons').classList.remove('hidden');
+  sp.phase = 'test';
+  sp.log = [];
+  $('sp-label').textContent = 'Teste';
+  sp.testStart = performance.now();
+  spShowProbe(spNextProbe(-1, rng));
+  sp.testTimer = setInterval(() => {
+    const el = (performance.now() - sp.testStart) / 1000;
+    const left = Math.max(0, SP_DURATION - el);
+    $('sp-timer').textContent = `${Math.ceil(left)}s`;
+    $('sp-bar').style.width = `${(el / SP_DURATION) * 100}%`;
+    if (left <= 0) spFinish();
+  }, 100);
+}
+
+function spFinish() {
+  clearInterval(sp.testTimer);
+  sp.phase = 'done';
+  sp.probe = -1;
+  const n = sp.log.length;
+  const score = sp.log.filter(r => r.correct).length;
+  const acc = n ? score / n : 0;
+  const rts = sp.log.filter(r => r.correct).map(r => r.rt).sort((a, b) => a - b);
+  const medRt = rts.length ? rts[Math.floor(rts.length / 2)] : null;
+  const ix = spIndex(score);
+
+  $('sr-main').innerHTML = `
+    <p class="muted">Acertos em 90 segundos</p>
+    <div class="big">${score}</div>
+    <p class="range">Índice ${ix.index} · ${classify(ix.index)}</p>
+    <p class="muted small">A média de referência é de ${SP_NORM.mean.toString().replace('.', ',')} acertos. Seu resultado é igual ou superior ao de cerca de ${ix.pct}% das pessoas.</p>
+    ${bellSVG(ix.index, ix.index, ix.index)}
+  `;
+  $('sr-detail').innerHTML = `
+    <h2>Detalhes</h2>
+    <div class="row"><span>Respostas dadas</span><span>${n}</span></div>
+    <div class="row"><span>Precisão</span><span>${Math.round(acc * 100)}%</span></div>
+    <div class="row"><span>Tempo típico por acerto (mediana)</span><span>${medRt !== null ? (medRt / 1000).toFixed(2) + ' s' : '—'}</span></div>
+    <p class="muted small" style="margin-top:10px">A pontuação é o número de acertos: erros não somam nem subtraem. Cada 12 acertos a mais ou a menos equivalem a cerca de 15 pontos no índice.</p>
+  `;
+  const warns = [
+    `<b>Régua de comparação:</b> ${SP_NORM.n.toLocaleString('pt-BR')} pessoas do TestMyBrain (Singh et al., 2021), aplicadas online com o mesmo procedimento. A amostra é jovem (idade média de 28,8 anos; mais de um terço entre 12 e 19 anos).`,
+    '<b>Sem ajuste por idade:</b> a velocidade de processamento atinge o pico por volta dos 18–19 anos e depois começa a cair (Hartshorne & Germine, 2015). Como a norma publicada não traz valores por idade, pessoas mais velhas tendem a receber um índice mais baixo do que receberiam comparadas à própria faixa etária.',
+    'O tipo de aparelho também influencia (tela de toque ou teclado).'
+  ];
+  if (n >= 10 && acc < 0.8) {
+    warns.push(`<b>Atenção:</b> a precisão foi de ${Math.round(acc * 100)}%, o que sugere respostas apressadas ou chutes. O resultado pode não refletir seu desempenho real.`);
+  }
+  warns.push('Estimativa de autoconhecimento, sem validade clínica.');
+  $('sr-warn').innerHTML = warns.join('<br><br>');
+
+  const prof = loadProfile();
+  prof.gs = { date: new Date().toISOString(), score, index: ix.index, z: +ix.z.toFixed(3), acc: +acc.toFixed(3) };
+  saveProfile(prof);
+  show('s-sresult');
+}
+
+/* PWA: registra o service worker, se existir */
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+<!-- Nuvem (opcional): só é ativada se firebase-config.js estiver preenchido -->
+<script src="firebase-config.js"></script>
+<script type="module" src="firebase-sync.js"></script>
+</body>
+</html>

@@ -72,7 +72,11 @@
   .opt svg { display: block; width: 100%; height: auto; }
   .opt.right { border-color: var(--ok); }
   .opt.wrong { border-color: var(--bad); }
-  .timer { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--warn); min-width: 2.5em; text-align: right; }
+  .timer { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--text); min-width: 4.5em; text-align: right; }
+  .timer.low { color: var(--warn); }
+  .tbar { height: 4px; background: var(--card2); border-radius: 999px; overflow: hidden; margin: -8px 0 14px; }
+  .tbar > div { height: 100%; width: 100%; background: var(--muted); transition: width .2s linear; }
+  .tbar.low > div { background: var(--warn); }
   .fix { display: flex; align-items: center; justify-content: center; height: 300px; font-size: 2.4rem; color: var(--muted); }
   .feedback { margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: var(--card2); font-size: 0.92rem; }
 
@@ -395,6 +399,17 @@
         <input type="file" id="f-import" accept="application/json,.json" class="hidden">
         <p class="muted small" id="io-status" style="margin-top:10px"></p>
       </div>
+      <div class="card">
+        <h2>Recomeçar do zero</h2>
+        <p class="muted small">Para refazer <b>uma</b> etapa, basta fazê-la de novo pelo menu: o resultado novo substitui o antigo. Para apagar <b>todos</b> os resultados (deste aparelho e da sua conta) e começar do zero, use o botão abaixo. Dica: baixe um backup antes, caso queira guardar os resultados atuais.</p>
+        <button class="btn ghost" id="b-reset">Apagar todos os meus resultados</button>
+        <p class="muted small" id="reset-status" style="margin-top:10px"></p>
+        <div class="hidden" id="reset-confirm">
+          <p class="auth-msg err" style="margin-top:12px">Tem certeza? Todos os resultados e o histórico serão apagados deste aparelho e da sua conta. Isso não pode ser desfeito.</p>
+          <button class="btn" id="b-reset-yes" style="background:#3d4a5c">Sim, apagar tudo</button>
+          <button class="btn ghost" id="b-reset-no">Cancelar</button>
+        </div>
+      </div>
     </div>
     <div id="report"></div>
     <button class="btn no-print" id="b-report-back">Voltar às etapas</button>
@@ -579,6 +594,7 @@
       <span class="timer" id="t-timer"></span>
     </div>
     <div class="progress"><div id="t-bar"></div></div>
+    <div class="tbar hidden" id="t-tbar"><div id="t-tfill"></div></div>
     <div id="t-fix" class="fix hidden">+</div>
     <div id="t-stage">
       <div class="matrix" id="t-matrix"></div>
@@ -1388,6 +1404,11 @@ function nextItem() {
   $('t-feedback').classList.add('hidden');
   $('b-next').classList.add('hidden');
   $('t-timer').textContent = '';
+  $('t-timer').classList.remove('low');
+  $('t-tbar').classList.remove('low');
+  $('t-tfill').style.width = '100%';
+  // No treino não há limite de tempo; no teste, a barra de tempo aparece
+  $('t-tbar').classList.toggle('hidden', state.mode !== 'test');
 
   let combo;
   if (state.mode === 'practice') {
@@ -1427,15 +1448,23 @@ function renderItem() {
   });
   state.shownAt = performance.now();
   if (state.mode === 'test') {
+    tick();
     state.timerId = setInterval(tick, 200);
+  } else {
+    $('t-timer').textContent = 'sem limite de tempo';
   }
 }
 
 function tick() {
   const el = (performance.now() - state.shownAt) / 1000;
   const left = Math.max(0, TIME_LIMIT - el);
-  // Como no MaRs-IB: o relógio aparece nos 5 segundos finais
-  $('t-timer').textContent = left <= 5 ? `${Math.ceil(left)}s` : '';
+  // Relógio sempre visível: a pessoa sabe quanto tempo falta em cada matriz.
+  // Nos 5 segundos finais, muda de cor (como o aviso do protocolo do MaRs-IB).
+  const low = left <= 5;
+  $('t-timer').textContent = `⏱ ${Math.ceil(left)}s`;
+  $('t-timer').classList.toggle('low', low);
+  $('t-tbar').classList.toggle('low', low);
+  $('t-tfill').style.width = `${(left / TIME_LIMIT) * 100}%`;
   if (left <= 0) answer(-1);
 }
 
@@ -2113,7 +2142,7 @@ function spStartTest() {
   sp.testTimer = setInterval(() => {
     const el = (performance.now() - sp.testStart) / 1000;
     const left = Math.max(0, SP_DURATION - el);
-    $('sp-timer').textContent = `${Math.ceil(left)}s`;
+    $('sp-timer').textContent = `⏱ ${Math.ceil(left)}s`;
     $('sp-bar').style.width = `${(el / SP_DURATION) * 100}%`;
     if (left <= 0) spFinish();
   }, 100);
@@ -2305,6 +2334,7 @@ function buildReport() {
 function openReport() {
   buildReport();
   $('io-status').textContent = '';
+  $('reset-status').textContent = '';
   $('email-wrap').classList.toggle('hidden', !window.gfUserEmail);
   show('s-report');
 }
@@ -2382,6 +2412,29 @@ $('b-export-json').addEventListener('click', () => {
   a.click();
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
   $('io-status').textContent = 'Backup gerado. Guarde o arquivo num lugar seguro.';
+});
+
+// Apagar todos os resultados (aparelho + nuvem)
+$('b-reset').addEventListener('click', () => {
+  $('b-reset').classList.add('hidden');
+  $('reset-confirm').classList.remove('hidden');
+});
+$('b-reset-no').addEventListener('click', () => {
+  $('reset-confirm').classList.add('hidden');
+  $('b-reset').classList.remove('hidden');
+});
+$('b-reset-yes').addEventListener('click', async () => {
+  const age = loadProfile().age;
+  // Na nuvem, registra o momento do reset: resultados mais antigos que ele
+  // não voltam, mesmo que outro aparelho ainda tenha uma cópia guardada
+  if (window.gfCloud && window.gfCloud.markReset) window.gfCloud.markReset();
+  saveHistory([]);
+  saveProfile(age ? { age } : {});
+  $('reset-confirm').classList.add('hidden');
+  $('b-reset').classList.remove('hidden');
+  buildReport();
+  $('io-status').textContent = '';
+  $('reset-status').innerHTML = '<b>Pronto: seus resultados foram apagados.</b> Você pode fazer as etapas de novo pelo menu, com calma, desta vez para valer. 🙂';
 });
 
 $('b-import-json').addEventListener('click', () => $('f-import').click());

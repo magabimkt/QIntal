@@ -98,13 +98,28 @@ async function start() {
   let user = null;
   let pushTimer = null;
   let applyingRemote = false;
+  let resetAt = null; // momento do último "apagar todos os resultados"
 
   async function writeNow() {
     await setDoc(doc(db, 'users', user.uid), {
       profile: window.loadProfile(),
       history: window.loadHistory(),
+      resetAt: resetAt,
       updatedAt: serverTimestamp()
     });
+  }
+
+  // Remove resultados anteriores ao reset (cópias antigas em outros aparelhos)
+  function dropBeforeReset(profile, history, cutoff) {
+    if (!cutoff) return { profile: profile || {}, history: history || [] };
+    const p = {};
+    Object.keys(profile || {}).forEach(k => {
+      const v = profile[k];
+      if (v && typeof v === 'object' && v.date && v.date < cutoff) return;
+      p[k] = v;
+    });
+    const h = (history || []).filter(x => x && x.date && x.date >= cutoff);
+    return { profile: p, history: h };
   }
 
   function push() {
@@ -124,9 +139,11 @@ async function start() {
     try {
       const snap = await getDoc(doc(db, 'users', user.uid));
       const remote = snap.exists() ? snap.data() : {};
+      resetAt = remote.resetAt || null;
+      const local = dropBeforeReset(window.loadProfile(), window.loadHistory(), resetAt);
       applyingRemote = true;
-      window.saveProfile(mergeProfile(window.loadProfile(), remote.profile));
-      window.saveHistory(mergeHistory(window.loadHistory(), remote.history));
+      window.saveProfile(mergeProfile(local.profile, remote.profile));
+      window.saveHistory(mergeHistory(local.history, remote.history));
       applyingRemote = false;
       push();
     } catch (e) {
@@ -135,7 +152,12 @@ async function start() {
     }
   }
 
-  window.gfCloud = { push };
+  function markReset() {
+    resetAt = new Date().toISOString();
+    push();
+  }
+
+  window.gfCloud = { push, markReset };
 
   /* ---------- Formulário de login ---------- */
   let mode = 'login'; // 'login' | 'signup' | 'reset'

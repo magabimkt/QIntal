@@ -4,7 +4,7 @@
      sem internet, usa a cópia guardada.
    - Para forçar a atualização em todos os aparelhos, aumente o número da versão abaixo. */
 
-const CACHE = 'qintal-v1';
+const CACHE = 'qintal-v2';
 const ASSETS = [
   './',
   './index.html',

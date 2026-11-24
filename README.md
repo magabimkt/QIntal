@@ -20,7 +20,8 @@ Bateria de autoconhecimento cognitivo baseada no modelo CHC (Cattell-Horn-Carrol
 | Forma | Como funciona |
 |---|---|
 | **No aparelho** (padrão) | Os resultados ficam salvos no navegador do celular ou do computador. |
-| **Login com Google** (Firebase) | Os resultados ficam na sua conta e aparecem em qualquer aparelho. Ver a seção 2. |
+| **Conta (login obrigatório)** | Entrada com e-mail e senha (com "Criar conta" e "Esqueci minha senha") ou com Google. Os resultados ficam na conta e aparecem em qualquer aparelho. Ao sair, são apagados do aparelho e continuam na nuvem. Ver a seção 2. |
+| **Resumo por e-mail** | Exportar resultados → *Enviar resumo para meu e-mail*: abre o app de e-mail com o resumo pronto e endereçado à própria pessoa. |
 | **Backup em arquivo** | Menu de etapas → *Exportar resultados* → *Baixar backup (.json)*. Em outro aparelho, use *Importar backup*. Funciona mesmo sem login. |
 | **Relatório em PDF** | Menu de etapas → *Exportar resultados* → *Salvar relatório em PDF*. Traz os resultados, a inspiração, os objetivos, o funcionamento e as referências de cada jogo. |
 
@@ -66,11 +67,12 @@ Sem o Firebase, os resultados ficam salvos só no aparelho. Com ele, ficam na su
 3. Copie os valores do objeto `firebaseConfig` que aparecer.
 4. Cole esses valores em **`firebase-config.js`**, no lugar das aspas vazias.
 
-### 2.3 Ativar o login com Google
+### 2.3 Ativar o login (e-mail/senha e Google)
 1. Menu **Build → Authentication → Get started**.
-2. Aba **Sign-in method → Google → Ativar**. Escolha o e-mail de suporte e salve.
-3. Aba **Settings → Authorized domains → Add domain**.
-4. Adicione **`SEU-USUARIO.github.io`**.
+2. Aba **Sign-in method → E-mail/senha → Ativar** (só a primeira chave) e salve.
+3. Aba **Sign-in method → Google → Ativar**. Escolha o e-mail de suporte e salve.
+4. Aba **Settings → Authorized domains → Add domain**.
+5. Adicione **`SEU-USUARIO.github.io`**.
 
 ### 2.4 Criar o banco de dados
 1. Menu **Build → Firestore Database → Create database**.

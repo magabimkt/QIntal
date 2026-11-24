@@ -133,6 +133,16 @@
   .stage .stage-score { color: var(--sc); }
   .stage h2 .ico { margin-right: 6px; }
 
+  /* Login */
+  input[type=email], input[type=password] { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--card2); color: var(--text); font-size: 1rem; }
+  .auth-msg { margin: 12px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--card2); font-size: 0.88rem; }
+  .auth-msg.err { border-left: 4px solid var(--bad); }
+  .auth-msg.ok { border-left: 4px solid var(--ok); }
+  .auth-links { text-align: center; margin: 14px 0 4px; font-size: 0.9rem; line-height: 2; }
+  .auth-links a { color: var(--accent); font-weight: 600; }
+  .auth-sep { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 0.85rem; margin: 10px 0 0; }
+  .auth-sep::before, .auth-sep::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
   /* Relatório */
   .rep-head { border-bottom: 3px solid var(--accent); padding-bottom: 10px; margin-bottom: 14px; }
   .rep-stage { border-left: 6px solid var(--sc); }
@@ -171,6 +181,31 @@
 <body>
 <div class="wrap">
 
+  <!-- ============ LOGIN ============ -->
+  <section id="s-auth" class="hidden">
+    <h1 class="logo" aria-label="QIntal"><span>Q</span><span>I</span><span>nt</span><span>al</span></h1>
+    <p class="muted">O quintal onde a mente brinca. Entre para fazer os desafios e guardar seus resultados com segurança.</p>
+    <div class="card" id="auth-loading"><p class="muted">Carregando…</p></div>
+    <div class="card hidden" id="auth-box">
+      <h2 id="auth-title">Entrar</h2>
+      <label for="auth-email">E-mail</label>
+      <input type="email" id="auth-email" autocomplete="email" placeholder="seu@email.com">
+      <div id="auth-pass-wrap">
+        <label for="auth-pass" style="margin-top:12px">Senha</label>
+        <input type="password" id="auth-pass" autocomplete="current-password" placeholder="Mínimo de 6 caracteres">
+      </div>
+      <p class="auth-msg hidden" id="auth-msg"></p>
+      <button class="btn" id="b-auth-main">Entrar</button>
+      <p class="auth-links">
+        <a href="#" id="a-auth-toggle">Não tem conta? Criar conta</a><br>
+        <a href="#" id="a-auth-forgot">Esqueci minha senha</a>
+      </p>
+      <div class="auth-sep"><span>ou</span></div>
+      <button class="btn ghost" id="b-auth-google">Entrar com Google</button>
+    </div>
+    <p class="muted small">Seus resultados ficam guardados na sua conta e só você tem acesso a eles. Assim, você pode usar o QIntal no celular e no computador.</p>
+  </section>
+
   <!-- ============ TELA INICIAL ============ -->
   <section id="s-home">
     <span class="tag">Bateria cognitiva · modelo CHC</span>
@@ -199,10 +234,9 @@
     </div>
 
     <div class="card hidden" id="cloud-card">
-      <h2>Salvar na nuvem</h2>
+      <h2>Sua conta</h2>
       <p class="muted small" id="cloud-status">Carregando…</p>
-      <button class="btn ghost" id="b-login">Entrar com Google</button>
-      <button class="btn ghost hidden" id="b-logout">Sair da conta</button>
+      <button class="btn ghost" id="b-logout">Sair da conta</button>
     </div>
 
     <button class="btn ghost" id="b-guide">Entenda o teste: etapas e pontuação</button>
@@ -351,6 +385,10 @@
         <h2>Como exportar</h2>
         <p class="muted small"><b>Relatório em PDF:</b> toque em "Salvar relatório em PDF" e, na janela de impressão, escolha "Salvar como PDF". O relatório traz seus resultados e a explicação científica de cada jogo.</p>
         <button class="btn" id="b-print">Salvar relatório em PDF</button>
+        <div id="email-wrap" class="hidden">
+          <p class="muted small" style="margin-top:16px"><b>Enviar para o seu e-mail:</b> abre o seu aplicativo de e-mail com um resumo dos resultados já escrito e endereçado a você. É só tocar em enviar.</p>
+          <button class="btn ghost" id="b-email">✉️ Enviar resumo para meu e-mail</button>
+        </div>
         <p class="muted small" style="margin-top:16px"><b>Arquivo de backup:</b> guarda seus resultados num arquivo, que pode ser importado em outro aparelho ou navegador. Útil mesmo sem login.</p>
         <button class="btn ghost" id="b-export-json">Baixar backup (.json)</button>
         <button class="btn ghost" id="b-import-json">Importar backup</button>
@@ -1213,7 +1251,7 @@ function saveHistory(list) {
    ===================================================================== */
 
 const $ = id => document.getElementById(id);
-const screens = ['s-home', 's-report', 's-guide', 's-menu', 's-cintro', 's-corsi', 's-cresult', 's-sintro', 's-speed', 's-sresult', 's-dintro', 's-digit', 's-dresult', 's-intro', 's-test', 's-ready', 's-result', 's-history', 's-about'];
+const screens = ['s-auth', 's-home', 's-report', 's-guide', 's-menu', 's-cintro', 's-corsi', 's-cresult', 's-sintro', 's-speed', 's-sresult', 's-dintro', 's-digit', 's-dresult', 's-intro', 's-test', 's-ready', 's-result', 's-history', 's-about'];
 
 /* Perfil: último resultado de cada etapa (salvo só no aparelho) */
 const PROFILE_KEY = 'gflab.profile.v1';
@@ -2267,8 +2305,43 @@ function buildReport() {
 function openReport() {
   buildReport();
   $('io-status').textContent = '';
+  $('email-wrap').classList.toggle('hidden', !window.gfUserEmail);
   show('s-report');
 }
+
+// Resumo em texto simples para o e-mail
+function buildEmailSummary() {
+  const p = loadProfile();
+  const L = [];
+  L.push('QIntal · Resumo dos meus resultados');
+  L.push(`Data: ${new Date().toLocaleDateString('pt-BR')}${p.age ? ` · Idade informada: ${p.age} anos` : ''}`);
+  L.push('');
+  L.push('Escala: média 100, desvio-padrão 15. Entre 90 e 109 = média (cerca de 50% das pessoas).');
+  L.push('');
+  if (p.gf) L.push(`🧩 Raciocínio fluido (Gf): QI ${p.gf.iq} · ${classify(p.gf.iq)} · faixa de 95%: ${p.gf.lo} a ${p.gf.hi} · percentil ≈ ${p.gf.pct}`);
+  else L.push('🧩 Raciocínio fluido (Gf): não realizado');
+  if (p.ds) {
+    L.push(`🔢 Dígitos, ordem direta: ${p.ds.fwd.span} dígitos · índice ${p.ds.fwd.index} (${classify(p.ds.fwd.index)})`);
+    L.push(`🔢 Dígitos, ordem inversa: ${p.ds.bwd.span} dígitos · índice ${p.ds.bwd.index} (${classify(p.ds.bwd.index)})`);
+  } else L.push('🔢 Memória de dígitos: não realizada');
+  if (p.cb) L.push(`🟦 Blocos de Corsi: span de ${p.cb.span} blocos · índice ${p.cb.index} (${classify(p.cb.index)})`);
+  else L.push('🟦 Blocos de Corsi: não realizado');
+  if (p.gs) L.push(`⚡ Velocidade de processamento: ${p.gs.score} acertos em 90 s · índice ${p.gs.index} (${classify(p.gs.index)})`);
+  else L.push('⚡ Velocidade de processamento: não realizada');
+  L.push('');
+  L.push('Réguas de comparação: MaRs-IB (Zorowitz et al., 2024), TestMyBrain (Singh et al., 2021) e Kessels et al. (2000).');
+  L.push('Estimativa de autoconhecimento, sem validade clínica. O relatório completo, com a explicação científica e as referências, pode ser salvo em PDF no app.');
+  L.push('');
+  L.push(`Acesse: ${location.origin}${location.pathname}`);
+  return L.join('\n');
+}
+
+$('b-email').addEventListener('click', () => {
+  const to = window.gfUserEmail || '';
+  const subject = 'QIntal · Meus resultados';
+  const url = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(buildEmailSummary())}`;
+  window.location.href = url;
+});
 $('b-menu-report').addEventListener('click', openReport);
 $('b-report-back').addEventListener('click', renderMenu);
 $('b-print').addEventListener('click', () => window.print());
@@ -2339,6 +2412,13 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') {
 </script>
 <!-- Nuvem (opcional): só é ativada se firebase-config.js estiver preenchido -->
 <script src="firebase-config.js"></script>
+<script>
+  // Com o Firebase configurado, o login é obrigatório: a tela de entrada aparece primeiro
+  (function () {
+    var c = window.GFLAB_FIREBASE_CONFIG || {};
+    if (c.apiKey && c.projectId && c.appId) show('s-auth');
+  })();
+</script>
 <script type="module" src="firebase-sync.js"></script>
 </body>
 </html>

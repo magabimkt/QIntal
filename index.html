@@ -133,6 +133,23 @@
   .stage .stage-score { color: var(--sc); }
   .stage h2 .ico { margin-right: 6px; }
 
+  /* Relatório */
+  .rep-head { border-bottom: 3px solid var(--accent); padding-bottom: 10px; margin-bottom: 14px; }
+  .rep-stage { border-left: 6px solid var(--sc); }
+  .rep-score { font-size: 1.6rem; font-weight: 800; color: var(--sc); }
+  .rep-stage h3 { color: var(--sc); }
+  .rep-refs { font-size: 0.8rem; color: var(--muted); padding-left: 18px; }
+  .rep-refs li { margin-bottom: 4px; }
+  @media print {
+    @page { margin: 14mm; }
+    body { background: #ffffff; }
+    .wrap { max-width: none; padding: 0; }
+    .no-print, #s-report > .btn { display: none !important; }
+    .card { break-inside: avoid; border-color: #cccccc; }
+    .rep-stage { break-inside: auto; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+
   /* Menu de etapas */
   .stage-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
   .stage-score { font-weight: 700; font-size: 0.95rem; }
@@ -223,6 +240,7 @@
       <p class="muted small">Símbolos e números · cerca de 3 minutos</p>
       <button class="btn" id="m-go-gs">Fazer etapa 4</button>
     </div>
+    <button class="btn" id="b-menu-report">📄 Exportar resultados</button>
     <button class="btn ghost" id="b-menu-guide">Entenda o teste: etapas e pontuação</button>
     <button class="btn ghost" id="b-menu-home">Voltar ao início</button>
   </section>
@@ -324,6 +342,26 @@
     <button class="btn" id="b-sback">Voltar às etapas</button>
   </section>
 
+  <!-- ============ RELATÓRIO / EXPORTAR ============ -->
+  <section id="s-report" class="hidden">
+    <div class="no-print">
+      <span class="tag">Exportar</span>
+      <h1>Seus resultados</h1>
+      <div class="card">
+        <h2>Como exportar</h2>
+        <p class="muted small"><b>Relatório em PDF:</b> toque em "Salvar relatório em PDF" e, na janela de impressão, escolha "Salvar como PDF". O relatório traz seus resultados e a explicação científica de cada jogo.</p>
+        <button class="btn" id="b-print">Salvar relatório em PDF</button>
+        <p class="muted small" style="margin-top:16px"><b>Arquivo de backup:</b> guarda seus resultados num arquivo, que pode ser importado em outro aparelho ou navegador. Útil mesmo sem login.</p>
+        <button class="btn ghost" id="b-export-json">Baixar backup (.json)</button>
+        <button class="btn ghost" id="b-import-json">Importar backup</button>
+        <input type="file" id="f-import" accept="application/json,.json" class="hidden">
+        <p class="muted small" id="io-status" style="margin-top:10px"></p>
+      </div>
+    </div>
+    <div id="report"></div>
+    <button class="btn no-print" id="b-report-back">Voltar às etapas</button>
+  </section>
+
   <!-- ============ GUIA: ENTENDA O TESTE ============ -->
   <section id="s-guide" class="hidden">
     <span class="tag">Guia</span>
@@ -392,6 +430,8 @@
         <li><b>Régua:</b> 36.000 pessoas do TestMyBrain, com o mesmo procedimento. Sem ajuste por idade (a norma publicada não traz valores por idade).</li>
       </ul>
     </div>
+
+    <div class="card" id="g-origins"></div>
 
     <div class="card">
       <h2>Como as etapas se relacionam</h2>
@@ -1024,8 +1064,63 @@ function cbIndex(span) {
   return { z, index: Math.round(Math.max(40, Math.min(160, 100 + 15 * z))), pct: Math.round(normCdf(z) * 100) };
 }
 
+/* =====================================================================
+   FICHA CIENTÍFICA DE CADA JOGO (usada no guia e no relatório)
+   ===================================================================== */
+const STAGE_INFO = [
+  {
+    key: 'gf', cls: 's1', icon: '🧩', name: 'Raciocínio fluido', chc: 'Gf · Raciocínio fluido',
+    inspiration: 'Inspirado nas Matrizes Progressivas de Raven (John C. Raven, 1938) e no subteste Raciocínio Matricial das escalas Wechsler. As matrizes são a tarefa clássica para medir o raciocínio fluido. Nossos itens são originais: são gerados por um algoritmo que segue as regras descritas por Carpenter, Just e Shell (1990) e usam o formato do banco aberto MaRs-IB.',
+    objective: 'Medir a capacidade de resolver problemas novos descobrindo regras, sem depender de conhecimento escolar. No modelo CHC, o Gf é a habilidade ampla mais próxima da inteligência geral (g).',
+    how: 'Teste adaptativo de 20 matrizes, com até 30 s cada. A pontuação usa a Teoria de Resposta ao Item (modelo de 3 parâmetros): cada questão tem uma dificuldade prevista, e o nível é estimado pelas questões acertadas e erradas. Depois, o resultado é comparado a pessoas da mesma idade.',
+    norm: 'Calibração do MaRs-IB: 1.501 adultos dos EUA, de 18 a 74 anos, com ajuste por idade estimado a partir dos dados públicos do estudo.',
+    refs: [
+      'Raven, J. C. (1938). Progressive Matrices. H. K. Lewis.',
+      'Carpenter, P. A., Just, M. A., & Shell, P. (1990). What one intelligence test measures: A theoretical account of the processing in the Raven Progressive Matrices Test. Psychological Review, 97(3), 404–431.',
+      'Chierchia, G., et al. (2019). The matrix reasoning item bank (MaRs-IB). Royal Society Open Science, 6, 190232.',
+      'Zorowitz, S., Chierchia, G., Blakemore, S.-J., & Daw, N. D. (2024). An item response theory analysis of the matrix reasoning item bank (MaRs-IB). Behavior Research Methods, 56(3), 1104–1122.'
+    ]
+  },
+  {
+    key: 'ds', cls: 's2', icon: '🔢', name: 'Memória de dígitos', chc: 'Gwm · Memória de trabalho',
+    inspiration: 'Inspirado no subteste Dígitos das escalas Wechsler, uma das tarefas mais antigas da psicologia: a repetição de sequências de números já era usada por Joseph Jacobs em 1887 para medir a "amplitude" da memória. O procedimento segue a versão digital padronizada do TestMyBrain.',
+    objective: 'Na ordem direta, medir quanta informação verbal a pessoa consegue guardar por alguns segundos (memória de curto prazo). Na ordem inversa, medir a capacidade de guardar e manipular essa informação ao mesmo tempo (memória de trabalho).',
+    how: 'Sequências de 2 a 11 dígitos, apresentados um por segundo, com 2 tentativas por tamanho. A pontuação é o span: a maior sequência lembrada corretamente, comparada à média de referência.',
+    norm: 'TestMyBrain: cerca de 9.800 pessoas (ordem direta; média 6,43) e 6.200 pessoas (ordem inversa; média 5,33), aplicadas online com o mesmo procedimento.',
+    refs: [
+      'Jacobs, J. (1887). Experiments on "prehension". Mind, 12, 75–79.',
+      'Singh, S., et al., & Germine, L. (2021). The TestMyBrain Digital Neuropsychology Toolkit: Development and psychometric characteristics. Journal of Clinical and Experimental Neuropsychology, 43(8), 786–795.',
+      'Zimmermann, N., et al. (2015). Brazilian preliminary norms and investigation of age and education effects on the Modified Wisconsin Card Sorting Test, Stroop Color and Word test and Digit Span test in adults. Dementia & Neuropsychologia, 9(2), 120–127.'
+    ]
+  },
+  {
+    key: 'cb', cls: 's3', icon: '🟦', name: 'Blocos de Corsi', chc: 'Gwm · Memória visuoespacial',
+    inspiration: 'Inspirado no Teste dos Blocos de Corsi, criado por Philip Corsi (1972) como a versão espacial do teste de dígitos. Em vez de números, a pessoa memoriza a ordem em que blocos são tocados. O procedimento segue a padronização de Kessels et al. (2000).',
+    objective: 'Medir a memória visuoespacial de curto prazo: a capacidade de guardar posições e trajetos no espaço, sem depender de palavras ou números.',
+    how: 'Sequências de 2 a 9 blocos, acesos no ritmo de 1 por segundo, com 2 tentativas por tamanho. A pontuação é o span: a maior sequência repetida corretamente.',
+    norm: 'Kessels et al. (2000): 70 adultos saudáveis de 18 a 72 anos (média de 6,2 blocos). É a régua mais aproximada da bateria.',
+    refs: [
+      'Corsi, P. M. (1972). Human memory and the medial temporal region of the brain (Tese de doutorado). McGill University.',
+      'Kessels, R. P. C., van Zandvoort, M. J. E., Postma, A., Kappelle, L. J., & de Haan, E. H. F. (2000). The Corsi Block-Tapping Task: Standardization and normative data. Applied Neuropsychology, 7(4), 252–258.',
+      'Brunetti, R., Del Gatto, C., & Delogu, F. (2014). eCorsi: implementation and testing of the Corsi block-tapping task for digital tablets. Frontiers in Psychology, 5, 939.'
+    ]
+  },
+  {
+    key: 'gs', cls: 's4', icon: '⚡', name: 'Velocidade de processamento', chc: 'Gs · Velocidade de processamento',
+    inspiration: 'Inspirado no subteste Código (Digit Symbol) das escalas Wechsler, uma tarefa de substituição de símbolos por números usada há mais de 100 anos. O procedimento segue a versão digital do TestMyBrain (Digit Symbol Matching).',
+    objective: 'Medir a rapidez para realizar uma tarefa mental simples mantendo a atenção. Não mede raciocínio, mas a eficiência com que a pessoa processa informações básicas.',
+    how: 'Durante 90 segundos, a pessoa associa símbolos a números usando uma legenda sempre visível. A pontuação é o número de acertos, comparado à média de referência.',
+    norm: 'TestMyBrain: 36.000 pessoas (média de 51,87 acertos), aplicadas online com o mesmo procedimento. Sem ajuste por idade.',
+    refs: [
+      'Wechsler, D. (1997). Wechsler Adult Intelligence Scale – Third Edition (WAIS-III). The Psychological Corporation.',
+      'Singh, S., et al., & Germine, L. (2021). The TestMyBrain Digital Neuropsychology Toolkit. Journal of Clinical and Experimental Neuropsychology, 43(8), 786–795.',
+      'Hartshorne, J. K., & Germine, L. T. (2015). When does cognitive functioning peak? The asynchronous rise and fall of different cognitive abilities across the lifespan. Psychological Science, 26(4), 433–443.'
+    ]
+  }
+];
+
 if (typeof module !== 'undefined') {
-  module.exports = { cbSequence, cbIndex, CB_NORM, CB_MAX_LEN, spIndex, spMapping, spNextProbe, SP_NORM, dsSequence, dsExpected, dsNewRun, dsRecord, dsIndex, DS_NORMS, ageNorm, COMBOS, ALPHA, GAMMA, KAPPA, pCorrect, itemInfo, estimate, normCdf, chooseCombo, generateItem, makeRng, cellKey, hasCollision, N_ITEMS };
+  module.exports = { STAGE_INFO, cbSequence, cbIndex, CB_NORM, CB_MAX_LEN, spIndex, spMapping, spNextProbe, SP_NORM, dsSequence, dsExpected, dsNewRun, dsRecord, dsIndex, DS_NORMS, ageNorm, COMBOS, ALPHA, GAMMA, KAPPA, pCorrect, itemInfo, estimate, normCdf, chooseCombo, generateItem, makeRng, cellKey, hasCollision, N_ITEMS };
 }
 </script>
 
@@ -1118,7 +1213,7 @@ function saveHistory(list) {
    ===================================================================== */
 
 const $ = id => document.getElementById(id);
-const screens = ['s-home', 's-guide', 's-menu', 's-cintro', 's-corsi', 's-cresult', 's-sintro', 's-speed', 's-sresult', 's-dintro', 's-digit', 's-dresult', 's-intro', 's-test', 's-ready', 's-result', 's-history', 's-about'];
+const screens = ['s-home', 's-report', 's-guide', 's-menu', 's-cintro', 's-corsi', 's-cresult', 's-sintro', 's-speed', 's-sresult', 's-dintro', 's-digit', 's-dresult', 's-intro', 's-test', 's-ready', 's-result', 's-history', 's-about'];
 
 /* Perfil: último resultado de cada etapa (salvo só no aparelho) */
 const PROFILE_KEY = 'gflab.profile.v1';
@@ -1210,6 +1305,8 @@ $('age').addEventListener('input', updateStart);
 $('b-start').addEventListener('click', () => {
   const a = parseInt($('age').value, 10);
   state.age = Number.isFinite(a) ? a : null;
+  const prof = loadProfile();
+  if (state.age !== null && prof.age !== state.age) { prof.age = state.age; saveProfile(prof); }
   renderMenu();
 });
 $('m-go-gf').addEventListener('click', () => show('s-intro'));
@@ -2025,6 +2122,215 @@ function spFinish() {
   saveProfile(prof);
   show('s-sresult');
 }
+
+/* =====================================================================
+   GUIA: DE ONDE VÊM NOSSOS JOGOS
+   ===================================================================== */
+function renderOrigins() {
+  $('g-origins').innerHTML = `<h2>De onde vêm nossos jogos</h2>
+    <p class="muted small">Cada jogo do QIntal foi inspirado num teste clássico da psicologia e segue um procedimento publicado, para que o resultado possa ser comparado a dados reais.</p>
+    ${STAGE_INFO.map(st => `
+      <div class="rep-stage ${st.cls}" style="padding-left:12px;margin:16px 0">
+        <h3 style="margin-top:0">${st.icon} ${st.name} <span class="muted small">· ${st.chc}</span></h3>
+        <p><b>Inspiração:</b> ${st.inspiration}</p>
+        <p><b>Objetivo:</b> ${st.objective}</p>
+      </div>`).join('')}
+    <p class="muted small">As referências completas estão na tela "A ciência por trás do teste" e no relatório exportado.</p>`;
+}
+renderOrigins();
+
+/* =====================================================================
+   RELATÓRIO E EXPORTAÇÃO
+   ===================================================================== */
+function fmtDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return isNaN(d) ? '' : d.toLocaleDateString('pt-BR');
+}
+
+function stageResultHTML(key, p) {
+  const none = '<p class="muted">Etapa ainda não realizada.</p>';
+  if (key === 'gf') {
+    if (!p.gf) return none;
+    return `<div class="rep-score">QI ${p.gf.iq}</div>
+      <p><b>${classify(p.gf.iq)}</b> · faixa provável (95%): ${p.gf.lo} a ${p.gf.hi} · percentil ≈ ${p.gf.pct}<br>
+      <span class="muted small">Comparado a pessoas da mesma idade · realizado em ${fmtDate(p.gf.date)}</span></p>`;
+  }
+  if (key === 'ds') {
+    if (!p.ds) return none;
+    return `<div class="rep-score">${p.ds.fwd.index} / ${p.ds.bwd.index}</div>
+      <p><b>Ordem direta:</b> ${p.ds.fwd.span} dígitos · índice ${p.ds.fwd.index} (${classify(p.ds.fwd.index)})<br>
+      <b>Ordem inversa:</b> ${p.ds.bwd.span} dígitos · índice ${p.ds.bwd.index} (${classify(p.ds.bwd.index)})<br>
+      <span class="muted small">Realizado em ${fmtDate(p.ds.date)}</span></p>`;
+  }
+  if (key === 'cb') {
+    if (!p.cb) return none;
+    return `<div class="rep-score">Índice ${p.cb.index}</div>
+      <p><b>${classify(p.cb.index)}</b> · span de ${p.cb.span} blocos · escore total ${p.cb.total * p.cb.span}<br>
+      <span class="muted small">Realizado em ${fmtDate(p.cb.date)}</span></p>`;
+  }
+  if (key === 'gs') {
+    if (!p.gs) return none;
+    return `<div class="rep-score">Índice ${p.gs.index}</div>
+      <p><b>${classify(p.gs.index)}</b> · ${p.gs.score} acertos em 90 s · precisão de ${Math.round((p.gs.acc || 0) * 100)}%<br>
+      <span class="muted small">Realizado em ${fmtDate(p.gs.date)}</span></p>`;
+  }
+  return none;
+}
+
+function buildReport() {
+  const p = loadProfile();
+  const age = p.age || state.age;
+  const bars = [];
+  if (p.gf) bars.push({ name: '🧩 Raciocínio fluido', v: p.gf.iq, c: 'var(--c1)' });
+  if (p.ds) {
+    bars.push({ name: '🔢 Dígitos, ordem direta', v: p.ds.fwd.index, c: 'var(--c2)' });
+    bars.push({ name: '🔢 Dígitos, ordem inversa', v: p.ds.bwd.index, c: 'var(--c2)' });
+  }
+  if (p.cb) bars.push({ name: '🟦 Blocos de Corsi', v: p.cb.index, c: 'var(--c3)' });
+  if (p.gs) bars.push({ name: '⚡ Velocidade de processamento', v: p.gs.index, c: 'var(--c4)' });
+  const barsHTML = bars.length ? bars.map(it => {
+    const w = Math.max(0, Math.min(100, ((it.v - 40) / 120) * 100));
+    return `<div class="pbar"><div class="lbl"><span>${it.name}</span><b>${it.v} · ${classify(it.v)}</b></div>
+      <div class="track"><div class="fill" style="width:${w}%;background:${it.c}"></div><div class="mid"></div></div></div>`;
+  }).join('') : '<p class="muted">Nenhuma etapa realizada ainda.</p>';
+
+  const stages = STAGE_INFO.map(st => `
+    <div class="card rep-stage ${st.cls}">
+      <span class="tag ${st.cls}">${st.chc}</span>
+      <h2 style="margin-top:8px">${st.icon} ${st.name}</h2>
+      ${stageResultHTML(st.key, p)}
+      <h3>Inspiração</h3><p>${st.inspiration}</p>
+      <h3>Objetivo</h3><p>${st.objective}</p>
+      <h3>Como funciona e como é pontuado</h3><p>${st.how}</p>
+      <h3>Régua de comparação</h3><p>${st.norm}</p>
+      <h3>Referências</h3><ul class="rep-refs">${st.refs.map(r => `<li>${r}</li>`).join('')}</ul>
+    </div>`).join('');
+
+  $('report').innerHTML = `
+    <div class="card">
+      <div class="rep-head">
+        <h1 class="logo" aria-label="QIntal" style="margin:0"><span>Q</span><span>I</span><span>nt</span><span>al</span></h1>
+        <p class="muted" style="margin:0">Relatório de resultados · bateria cognitiva baseada no modelo CHC</p>
+      </div>
+      <div class="row"><span>Data do relatório</span><span>${new Date().toLocaleDateString('pt-BR')}</span></div>
+      ${age ? `<div class="row"><span>Idade informada</span><span>${age} anos</span></div>` : ''}
+      <div class="row"><span>Etapas realizadas</span><span>${['gf', 'ds', 'cb', 'gs'].filter(k => p[k]).length} de 4</span></div>
+    </div>
+
+    <div class="card">
+      <h2>Resumo do perfil</h2>
+      <p class="muted small">Todos os resultados estão na mesma escala (média 100, desvio-padrão 15). A linha vertical marca a média.</p>
+      ${barsHTML}
+    </div>
+
+    <div class="card">
+      <h2>Como ler os resultados</h2>
+      <p>O QI indica a posição de uma pessoa em relação a outras, e não uma contagem de acertos. A escala é construída para que a média seja 100 e o desvio-padrão seja 15.</p>
+      <div class="row band head"><span>Pontuação</span><span>Classificação</span><span>Pessoas</span></div>
+      <div class="row band"><span>130 ou mais</span><span>Muito acima da média</span><span class="muted">≈ 2%</span></div>
+      <div class="row band"><span>120–129</span><span>Acima da média</span><span class="muted">≈ 7%</span></div>
+      <div class="row band"><span>110–119</span><span>Média superior</span><span class="muted">≈ 16%</span></div>
+      <div class="row band"><span>90–109</span><span>Média</span><span class="muted">≈ 50%</span></div>
+      <div class="row band"><span>80–89</span><span>Média inferior</span><span class="muted">≈ 16%</span></div>
+      <div class="row band"><span>70–79</span><span>Abaixo da média</span><span class="muted">≈ 7%</span></div>
+      <div class="row band"><span>69 ou menos</span><span>Muito abaixo da média</span><span class="muted">≈ 2%</span></div>
+      <p class="muted small" style="margin-top:10px">Diferenças de 10 a 20 pontos entre domínios são comuns e descrevem o perfil da pessoa; não indicam, por si só, nenhum problema.</p>
+    </div>
+
+    <div class="card">
+      <h2>Fundamentação geral</h2>
+      <p>O QIntal segue o modelo <b>Cattell-Horn-Carroll (CHC)</b>, a teoria mais aceita sobre a estrutura das habilidades cognitivas. Nele, a inteligência geral (<i>g</i>) se divide em habilidades amplas, como raciocínio fluido (Gf), memória de trabalho (Gwm) e velocidade de processamento (Gs). A base dessa ideia é a <b>variedade positiva</b> descoberta por Spearman (1904): o desempenho em diferentes tarefas mentais tende a andar junto.</p>
+      <p>Os testes completos de inteligência, como o WAIS, combinam vários subtestes. O QIntal segue a mesma lógica, usando tarefas com procedimentos e normas publicados.</p>
+      <ul class="rep-refs">
+        <li>Spearman, C. (1904). "General intelligence," objectively determined and measured. American Journal of Psychology, 15(2), 201–292.</li>
+        <li>Schneider, W. J., & McGrew, K. S. (2012). The Cattell-Horn-Carroll model of intelligence. In D. P. Flanagan & P. L. Harrison (Eds.), Contemporary Intellectual Assessment (3rd ed., pp. 99–144). Guilford.</li>
+        <li>Embretson, S. E. (1998). A cognitive design system approach to generating valid tests. Psychological Methods, 3(3), 380–396.</li>
+      </ul>
+    </div>
+
+    ${stages}
+
+    <div class="card">
+      <h2>Limitações</h2>
+      <ul class="clean">
+        <li>Este é um instrumento de <b>autoconhecimento, sem validade clínica</b>. Não substitui avaliação psicológica. No Brasil, os testes psicológicos são de uso privativo do psicólogo e precisam de parecer favorável no SATEPSI (Resolução CFP nº 31/2022).</li>
+        <li>As réguas de comparação vêm de amostras estrangeiras. Ainda não há normas brasileiras abertas para estas tarefas.</li>
+        <li>Não há índice de QI geral: combinar os domínios exige conhecer as correlações entre eles, ainda não verificadas para esta bateria.</li>
+        <li>Conhecimento e vocabulário (Gc) e processamento visual (Gv) não são medidos.</li>
+        <li>Todo resultado é uma estimativa com margem de erro. Repetir os testes tende a aumentar a pontuação por familiaridade.</li>
+      </ul>
+    </div>
+    <p class="muted small" style="text-align:center">Gerado pelo QIntal · o quintal onde a mente brinca</p>`;
+}
+
+function openReport() {
+  buildReport();
+  $('io-status').textContent = '';
+  show('s-report');
+}
+$('b-menu-report').addEventListener('click', openReport);
+$('b-report-back').addEventListener('click', renderMenu);
+$('b-print').addEventListener('click', () => window.print());
+
+// Backup em arquivo .json
+function mergeHistoryLocal(a, b) {
+  const byDate = new Map();
+  [...(a || []), ...(b || [])].forEach(h => { if (h && h.date) byDate.set(h.date, h); });
+  const list = [...byDate.values()].sort((x, y) => x.date.localeCompare(y.date));
+  list.forEach((h, i) => { h.attempt = i + 1; });
+  return list;
+}
+function mergeProfileLocal(a, b) {
+  const out = {};
+  new Set([...Object.keys(a || {}), ...Object.keys(b || {})]).forEach(k => {
+    const x = (a || {})[k], y = (b || {})[k];
+    if (x === undefined) out[k] = y;
+    else if (y === undefined) out[k] = x;
+    else if (typeof x !== 'object' || typeof y !== 'object') out[k] = y;
+    else out[k] = (x.date || '') >= (y.date || '') ? x : y;
+  });
+  return out;
+}
+
+$('b-export-json').addEventListener('click', () => {
+  const data = {
+    app: 'QIntal',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    profile: loadProfile(),
+    history: loadHistory()
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `qintal-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  $('io-status').textContent = 'Backup gerado. Guarde o arquivo num lugar seguro.';
+});
+
+$('b-import-json').addEventListener('click', () => $('f-import').click());
+$('f-import').addEventListener('change', e => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (!data || data.app !== 'QIntal' || typeof data.profile !== 'object') throw new Error('formato');
+      saveProfile(mergeProfileLocal(loadProfile(), data.profile));
+      saveHistory(mergeHistoryLocal(loadHistory(), data.history));
+      buildReport();
+      $('io-status').textContent = 'Backup importado. Seus resultados foram juntados aos que já estavam neste aparelho.';
+    } catch (err) {
+      $('io-status').textContent = 'Não foi possível ler este arquivo. Use um backup gerado pelo QIntal.';
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+});
 
 /* PWA: registra o service worker, se existir */
 if ('serviceWorker' in navigator && location.protocol === 'https:') {

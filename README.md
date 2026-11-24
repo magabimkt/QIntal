@@ -15,6 +15,17 @@ Bateria de autoconhecimento cognitivo baseada no modelo CHC (Cattell-Horn-Carrol
 
 ---
 
+## Como os resultados são guardados
+
+| Forma | Como funciona |
+|---|---|
+| **No aparelho** (padrão) | Os resultados ficam salvos no navegador do celular ou do computador. |
+| **Login com Google** (Firebase) | Os resultados ficam na sua conta e aparecem em qualquer aparelho. Ver a seção 2. |
+| **Backup em arquivo** | Menu de etapas → *Exportar resultados* → *Baixar backup (.json)*. Em outro aparelho, use *Importar backup*. Funciona mesmo sem login. |
+| **Relatório em PDF** | Menu de etapas → *Exportar resultados* → *Salvar relatório em PDF*. Traz os resultados, a inspiração, os objetivos, o funcionamento e as referências de cada jogo. |
+
+---
+
 ## Arquivos
 
 | Arquivo | Para que serve |
